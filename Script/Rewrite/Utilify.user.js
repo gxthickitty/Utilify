@@ -18,6 +18,123 @@
 // @run-at       document-start
 // ==/UserScript==
 
+(() => { // Paste Always Enabled + Obfuscate Dots (Toggle) within pasted content (mainly for URLs)
+  'use strict';
+
+  const WHITELISTED_DOMAINS = [ //will never obfuscate dots in those urls:
+    'youtube.com',
+    'youtu.be',
+  ];
+
+  const URL_REGEX = /(?:https?:\/\/)?(?:www\.)?([\w.-]+(?:\.[\w.-]+)+)(?:\/[\w-./?%=&]*)?/gi;
+
+  function isWhitelisted(domain) {
+    domain = domain.toLowerCase();
+    return WHITELISTED_DOMAINS.some(whitelisted =>
+      domain === whitelisted ||
+      domain.endsWith('.' + whitelisted)
+    );
+  }
+
+  function obfuscateDotsInUrls(text, enabled = true) {
+    if (!enabled) return text;
+    return text.replace(URL_REGEX, (fullMatch, domain) => {
+      if (isWhitelisted(domain)) return fullMatch;
+      return fullMatch.replace(/\./g, '%2E');
+    });
+  }
+
+  function handlePaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    document.execCommand('insertText', false, text);
+  }
+
+  function handleInput(e) {
+    const target = e.target;
+    if (target._disableObfuscation) return;
+
+    if (e.inputType !== 'insertText' || !e.data) return;
+
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const newValue = obfuscateDotsInUrls(target.value, !target._disableObfuscation);
+
+    if (newValue !== target.value) {
+      const beforeSelection = target.value.substring(0, start);
+      const afterChanges = obfuscateDotsInUrls(beforeSelection, !target._disableObfuscation);
+      const cursorOffset = afterChanges.length - beforeSelection.length;
+
+      target.value = newValue;
+      target.setSelectionRange(start + cursorOffset, end + cursorOffset);
+    }
+  }
+
+  function isTextInput(el) {
+    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName !== 'INPUT') return false;
+    return ['text', 'search', 'url', 'email', 'tel', 'password'].includes(el.type);
+  }
+
+  function createToggleButton(input) {
+    if (!isTextInput(input) || input._hasObfuscationButton) return;
+    input._hasObfuscationButton = true;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '⚡';
+    input._disableObfuscation = false; // ON by default
+
+    Object.assign(btn.style, {
+      marginLeft: '4px',
+      cursor: 'pointer',
+      fontSize: '0.85em',
+      transition: 'opacity 0.25s ease',
+      opacity: '1'
+    });
+
+    btn.addEventListener('click', () => {
+      input._disableObfuscation = !input._disableObfuscation;
+      btn.style.opacity = input._disableObfuscation ? '0.5' : '1';
+    });
+
+    input.insertAdjacentElement('afterend', btn);
+  }
+
+  // Observe new nodes for dynamic fields
+  const observer = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
+
+        if (isTextInput(node)) {
+          createToggleButton(node);
+          node.value = obfuscateDotsInUrls(node.value);
+        }
+
+        node.querySelectorAll && node.querySelectorAll('input, textarea').forEach(el => {
+          if (isTextInput(el)) {
+            createToggleButton(el);
+            el.value = obfuscateDotsInUrls(el.value);
+          }
+        });
+      });
+    });
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener('paste', handlePaste, true);
+  document.addEventListener('input', handleInput, true);
+
+  document.querySelectorAll('input, textarea').forEach(el => {
+    if (isTextInput(el)) {
+      createToggleButton(el);
+      el.value = obfuscateDotsInUrls(el.value);
+    }
+  });
+})();
+
 
 (async function() { // bg + filters
   "use strict";
