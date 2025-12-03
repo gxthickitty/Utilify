@@ -49,32 +49,64 @@ This version is a **full rewrite** of the original Utilify userscript, focusing 
 
 ***
 
-## ✨ Current Features List
+# **Categorized Feature Overview**
 
-### 1. Aesthetic and User Interface
-* **Custom Backgrounds and Effects:** Allows setting a page background image (configured via the user's profile description) with optional client-side effects such as **Rain** animation, **Snow** animation, **Blur**, and a **Dark** gradient overlay.
-* **Profile Customization:** Enables a custom-colored **Profile Banner** text and color, and applies a custom **CSS Gradient** to the main page root element, both controlled via profile bio settings.
-* **UI Tuning:** Implements CSS to hide various native KoGaMa UI elements and replaces the default KoGaMa logo with a custom image and link.
+Below is a refined and structured overview of all features, grouped into coherent categories while retaining the `feat : def` form. The formatting is intentionally clean, readable, and not overly ornate.
 
-### 2. Quality of Life (QoL) Enhancements
-* **Configuration Panel V2:** A custom, draggable settings panel with multiple tabs for managing all script features and settings.
-* **Profile Data Enhancement:** Extracts and displays detailed user metadata, including **Account Creation Date** and verbose **Last Seen/Ping** time, with a toggle for compact/detailed view.
-* **Copy Bio Button:** Adds a dedicated button next to the "Bio" header on a profile page to copy the full description to the clipboard.
-* **Last Played Game:** Displays a link to the user's last played game (retrieved from local storage, only for the current user's profile).
-* **Internet Archive Link:** Adds a quick link to view the current profile page on the Wayback Machine.
+---
 
-### 3. Data & Network Features
-* **Player Analytics:** On a game's play page, fetches and displays a real-time breakdown of current players into **Members** (logged-in users) and **Tourists** (guests).
-* **Friend Activity Stalking (HIGH RISK):** Intended to fetch friend location/activity by periodically polling the friend chat API (polling interval is set to 5 seconds).
+## **Core Utility & Automation**
 
-### 4. Privacy and Experimental (Configurable)
-* **Blur Sensitive Data:** Applies a configurable CSS filter blur to various elements containing sensitive account information (e.g., balance chips, profile info).
-* **Disable Friendslist:** Hides the native friends list module from the user interface.
-* **Appear Offline (HIGH RISK):** Intercepts and blocks network requests to `/pulse/post/` and `/user/{id}/pulse/` endpoints to prevent the user's online status from being updated on the server.
-* **Image Background Processing:** An experimental feature using a client-side Canvas operation to attempt to remove the blue background from images (likely avatars).
-* **Input Obfuscation:** Automatically replaces dots (`.`) in URLs (excluding whitelisted domains) with `%2E` in text input fields to bypass potential client-side filters.
+**Paste Always Enabled :** Forces all site text fields to allow pasting, overriding native restrictions.  
+**Dot Obfuscation (Toggle) :** Replaces every `.` in newly typed or pasted URLs with `%2E` to bypass filters; includes a toggle button to enable/disable.  
+**Copy Bio Button :** Adds a dedicated copy button to profile pages, including a subtle confirmation indicator.  
+**Friend & Request Scraper UI :** Provides a draggable UI panel for fetching, listing, and searching through full friend and request lists.  
+**Leaderboard URL Fix :** Intercepts outgoing leaderboard requests and removes redundant query parameters.  
+**Marketplace Auto‑Buy Loop :** Automates mass-purchase cycles with loop counts, pause/resume state, ETA calculation, and a transaction log.
 
-***
+---
+
+## **Profile & Avatar Enhancements**
+
+**Enhanced Profile Timestamps :** Replaces default timestamps with detailed creation/last‑seen data and allows toggling between compact or verbose time formats.  
+**Last Played Game Link :** Displays a direct link to the last game played by the user (owner‑view only).  
+**Internet Archive Link :** Adds an on‑page shortcut to the Wayback Machine snapshot of the current profile.  
+**Custom Profile Banner (Description‑Driven) :** Detects a custom markup tag in the profile description and displays a styled banner beneath the username.  
+**Custom Profile Gradient (Description‑Driven) :** Applies a `linear-gradient()` extracted from the bio as the mobile root background.  
+**Avatar Editor Tools :** Adds a marketplace search button and a thumbnail URL copier to each avatar tile in the editor.
+
+---
+
+## **Visual & UI Customization**
+
+**Dynamic Background Effects :** Allows custom background images on game pages with optional Blur, Dark overlay, and client‑rendered Rain or Snow effects.  
+**Custom Global Gradient :** Injects a global linear gradient across the interface with configurable angle and color stops.  
+**Glassmorphism Panels :** Gives UI panels a soft blurred‑glass appearance with controllable radius, hue, and transparency.  
+**Custom Fonts :** Enables selecting predefined fonts or loading an external font URL.  
+**Custom CSS & Online Styles :** Provides fields to inject user CSS or import remote stylesheets.  
+**UI Clean‑up :** Removes selected clutter elements such as redundant footers and navigation components.  
+**Custom Logo/Branding :** Replaces the original logo with a custom image and routes it to the author's GitHub repository.
+
+---
+
+## **Privacy Features**
+
+**Blur Sensitive Information :** Applies a blur filter to UI blocks containing personal or account‑related data.  
+**Blur Comments :** Specifically blurs all comment threads on pages where comments appear.  
+**Disable Friendslist :** Hides the entire friendslist component from rendering.  
+**Invisible Avatars (Experimental) :** Attempts to hide all avatars by intercepting their load/render process.
+
+---
+
+## **Use At Your Own Risk (UAOR)**
+
+**Appear Offline :** Blocks activity‑update network calls so the account appears offline to others.  
+**Lazy Streak Keeper :** Sends periodic automated messages to a fixed target profile to maintain an activity streak.  
+**Friend Activity :** Watches friend list changes and annotates pages with additional game/project info without active polling.  
+**Player Type Display :** Shows a compact player‑type breakdown (Global/Members/Tourists) on game pages.
+
+---
+
 
 ## 🛠️ Installation Guide
 
