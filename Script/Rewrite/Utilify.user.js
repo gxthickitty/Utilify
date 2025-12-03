@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UtilifyV2
 // @namespace    A scuffed quality of life addon for the WWW kogama >W<
-// @version      2.0.7
+// @version      2.0.8
 // @description  Slowly rewriting this addon because I want to feel useful.
 // @author       S
 // @match        *://www.kogama.com/*
@@ -2966,3 +2966,635 @@ GM_addStyle(`
   document.body.appendChild(panel);
 })();
 
+
+(() => { // Leaderboard Fix, Credits to Zpayer as the idea was his lol
+  const ENDPOINT_RE = /(^|https?:\/\/(?:www\.)?kogama\.com\/)(api\/leaderboard\/around_me\/)(\d+)(\/top\/?)(.*)$/i;
+  const PROFILE_PATH_RE = /^\/profile\/(\d+)\/leaderboard(\/|$)/i;
+
+  function getUidFromLocation() {
+    const m = location.pathname.match(PROFILE_PATH_RE);
+    return m ? m[1] : null;
+  }
+
+  function toAbsolute(urlLike) {
+    try {
+      return new URL(String(urlLike), location.href).toString();
+    } catch (e) {
+      return String(urlLike);
+    }
+  }
+
+  function rewriteLeaderboardUrl(urlLike) {
+    try {
+      const abs = toAbsolute(urlLike);
+      const parts = abs.match(ENDPOINT_RE);
+      const pageUid = getUidFromLocation();
+      if (!parts || !pageUid) return abs;
+      const prefix = parts[1].startsWith('/') ? location.origin + '/' : parts[1];
+      const rewritten = prefix + parts[2] + pageUid + parts[4] + (parts[5] || '');
+      return rewritten;
+    } catch (e) {
+      return toAbsolute(urlLike);
+    }
+  }
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async function(input, init) {
+    try {
+      let originalRequest = null;
+      let urlStr = null;
+      if (input instanceof Request) {
+        originalRequest = input;
+        urlStr = originalRequest.url;
+      } else {
+        urlStr = String(input);
+      }
+      const rewritten = rewriteLeaderboardUrl(urlStr);
+      if (rewritten !== urlStr) {
+        if (originalRequest) {
+          const newReqInit = {
+            method: originalRequest.method,
+            headers: originalRequest.headers,
+            mode: originalRequest.mode,
+            credentials: originalRequest.credentials,
+            cache: originalRequest.cache,
+            redirect: originalRequest.redirect,
+            referrer: originalRequest.referrer,
+            referrerPolicy: originalRequest.referrerPolicy,
+            integrity: originalRequest.integrity,
+            keepalive: originalRequest.keepalive,
+            signal: originalRequest.signal
+          };
+          let body = null;
+          try {
+            const clone = originalRequest.clone();
+            body = await clone.arrayBuffer().then(buf => buf.byteLength ? buf : null).catch(() => null);
+          } catch (e) {
+            body = null;
+          }
+          if (body) newReqInit.body = body;
+          const newReq = new Request(rewritten, newReqInit);
+          return nativeFetch(newReq);
+        } else {
+          return nativeFetch(rewritten, init);
+        }
+      }
+      return nativeFetch(input, init);
+    } catch (e) {
+      return nativeFetch(input, init);
+    }
+  };
+
+  const XHROpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+    try {
+      const rewritten = rewriteLeaderboardUrl(url);
+      return XHROpen.call(this, method, rewritten, async === undefined ? true : async, user, password);
+    } catch (e) {
+      return XHROpen.call(this, method, url, async === undefined ? true : async, user, password);
+    }
+  };
+
+  function applyHighlightToUid(uid) {
+    if (!uid) return;
+    const prev = document.querySelector('tr._13LmU');
+    if (prev && prev.id !== uid + 'Row') prev.classList.remove('_13LmU');
+    const tr = document.getElementById(uid + 'Row');
+    if (tr && !tr.classList.contains('_13LmU')) tr.classList.add('_13LmU');
+  }
+
+  function installLocationChangeHook() {
+    const _push = history.pushState;
+    const _replace = history.replaceState;
+    history.pushState = function(...args) {
+      const rv = _push.apply(this, args);
+      window.dispatchEvent(new Event('locationchange'));
+      return rv;
+    };
+    history.replaceState = function(...args) {
+      const rv = _replace.apply(this, args);
+      window.dispatchEvent(new Event('locationchange'));
+      return rv;
+    };
+    window.addEventListener('popstate', () => window.dispatchEvent(new Event('locationchange')));
+  }
+
+  let observer;
+  function installObserver() {
+    if (observer) return;
+    observer = new MutationObserver(() => {
+      applyHighlightToUid(getUidFromLocation());
+    });
+    observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+  }
+
+  installLocationChangeHook();
+  window.addEventListener('locationchange', () => {
+    setTimeout(() => applyHighlightToUid(getUidFromLocation()), 50);
+  });
+
+  applyHighlightToUid(getUidFromLocation());
+  installObserver();
+
+  Object.defineProperty(window, 'kogamaLeaderboardInstalled', { value: true, configurable: false });
+})();
+
+(function tamperAutoBuyerIIFE() {
+  // Only run on avatar/model pages
+  const urlPath = location.pathname || '';
+  if (!/^\/marketplace\/(model\/i-\d+\/|avatar\/a-\d+\/)/i.test(urlPath)) return;
+
+  const ctx = (() => {
+    const m1 = urlPath.match(/^\/marketplace\/avatar\/a-(\d+)\/?/i);
+    if (m1) return { objectType: 'avatar', objectId: m1[1] };
+    const m2 = urlPath.match(/^\/marketplace\/model\/i-(\d+)\/?/i);
+    if (m2) return { objectType: 'model', objectId: m2[1] };
+    return null;
+  })();
+  if (!ctx) return;
+
+  const PRICE = { avatar: 140, model: 10 };
+  const CREATOR_NON_ELITE = { avatar: 14, model: 1 };
+  const CREATOR_ELITE = { avatar: 98, model: 7 };
+  const INTERVAL_MS = 30000;
+  const INTERVAL_SEC = INTERVAL_MS / 1000; // 30 seconds
+
+  function css(id, rules) {
+    if (document.getElementById(id)) return;
+    const s = document.createElement('style');
+    s.id = id;
+    s.textContent = rules;
+    document.head.appendChild(s);
+  }
+
+  css('kg-autobuy-styles', `
+    /* Main Button Styling */
+    #kg-ab-btn {
+      margin-right: 8px;
+      background: #f8d26f;
+      color: #1f1f1f;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
+    }
+    #kg-ab-btn:hover {
+      background: #ffd36a;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+
+    /* Overlay */
+    #kg-ab-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 99998;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Panel */
+    #kg-ab-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      max-width: 95%;
+      background: #2a2a2a;
+      color: #e0e0e0;
+      border-radius: 16px;
+      z-index: 99999;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: none;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Header */
+    #kg-ab-panel .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      font-weight: 900;
+      font-size: 20px;
+      color: #f8d26f;
+      border-bottom: 2px solid rgba(248, 210, 111, 0.2);
+      padding-bottom: 10px;
+    }
+
+    /* Close Button */
+    #kg-ab-panel .close {
+      background: transparent;
+      border: none;
+      color: #e0e0e0;
+      font-size: 18px;
+      cursor: pointer;
+      transition: color 0.2s;
+      padding: 4px;
+      line-height: 1;
+    }
+    #kg-ab-panel .close:hover {
+      color: #ffd36a;
+    }
+
+    /* Labels */
+    #kg-ab-panel label {
+      display: block;
+      font-size: 14px;
+      color: #b0b0b0;
+      margin: 10px 0 6px 0;
+      font-weight: 600;
+    }
+
+    /* Input */
+    #kg-ab-panel input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: #3c3c3c;
+      color: #fff;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+
+    /* Action Buttons */
+    #kg-ab-panel .btn {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      background: #f8d26f;
+      color: #1f1f1f;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      transition: all 0.2s ease;
+    }
+    #kg-ab-panel .btn:hover {
+      background: #ffd36a;
+    }
+
+    /* Pause/Resume Button */
+    #kg-ab-panel .btn-pause {
+      background: #e74c3c;
+      color: #fff;
+      display: none;
+      margin-top: 10px;
+    }
+    #kg-ab-panel .btn-pause:hover {
+      background: #c0392b;
+    }
+
+    /* Math Display (Counters) */
+    #kg-ab-math {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #333333;
+      font-size: 14px;
+      color: #d0d0d0;
+      line-height: 1.6;
+    }
+    #kg-ab-math strong {
+      color: #f8d26f; /* Highlight the labels */
+      font-weight: 700;
+    }
+    #kg-ab-math .value {
+      text-align: right;
+      font-weight: 600;
+      color: #fff;
+    }
+    #kg-ab-math .compact-header {
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    #kg-ab-math .reward-grid {
+        display: flex;
+        justify-content: space-around;
+        gap: 10px;
+        margin-top: 8px;
+        font-size: 13px;
+        text-align: center;
+    }
+    #kg-ab-math .reward-item {
+        flex-grow: 1;
+        padding: 6px;
+        border-radius: 6px;
+        background: #2a2a2a;
+    }
+
+    /* ETA/Status Display */
+    #kg-ab-eta-container {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #f8d26f;
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(248, 210, 111, 0.1);
+    }
+    #kg-ab-eta-container strong {
+      font-weight: 800;
+      color: #ffd36a;
+      font-size: 16px;
+    }
+
+    /* Logs */
+    #kg-ab-logs {
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.3);
+      font-size: 12px;
+      color: #a9c1d6;
+      display: none;
+      border: 1px solid rgba(255,255,255,0.05);
+      white-space: nowrap;
+      overflow-x: hidden;
+    }
+    #kg-ab-logs div {
+      padding: 2px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.05);
+    }
+    #kg-ab-logs div:last-child {
+      border-bottom: none;
+    }
+
+    /* Footer */
+    #kg-ab-footer {
+      text-align: center;
+      font-size: 10px;
+      color: #777777;
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Fixing the loop purchase button/display */
+    #kg-ab-panel .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Better formatting for the loop button's state */
+    .purchase-running #kg-ab-start {
+      display: none !important;
+    }
+    .purchase-running #kg-ab-pause {
+      display: block !important;
+    }
+    .purchase-paused #kg-ab-pause {
+      background: #2ecc71 !important;
+      color: #fff !important;
+    }
+    .purchase-paused #kg-ab-pause:hover {
+      background: #27ae60 !important;
+    }
+  `);
+
+  function waitForParent(selector, callback) {
+    const el = document.querySelector(selector);
+    if (el) return callback(el);
+    const obs = new MutationObserver(() => {
+      const e = document.querySelector(selector);
+      if (e) {
+        obs.disconnect();
+        callback(e);
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  }
+
+  waitForParent('div.hR5CJ', (parent) => {
+    const btn = document.createElement('button');
+    btn.id = 'kg-ab-btn';
+    btn.type = 'button';
+    btn.textContent = 'LOOP PURCHASE';
+    parent.insertBefore(btn, parent.firstChild);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'kg-ab-overlay';
+    document.body.appendChild(overlay);
+
+    const panel = document.createElement('div');
+    panel.id = 'kg-ab-panel';
+    panel.innerHTML = `
+      <div class="header">💰 Mass Purchase Tool <button class="close">✕</button></div>
+      <label for="kg-ab-loops">Loops (times to buy)</label>
+      <input id="kg-ab-loops" type="number" min="1" value="3" />
+
+      <div id="kg-ab-math"></div>
+
+      <div id="kg-ab-eta-container">Estimated Time Remaining: <strong id="kg-ab-eta">00:00:00</strong></div>
+
+      <div class="controls">
+        <div class="btn" id="kg-ab-start">Start Loop Purchase</div>
+        <div class="btn btn-pause" id="kg-ab-pause">Pause</div>
+      </div>
+
+      <div id="kg-ab-logs"></div>
+      <div id="kg-ab-footer">Usage might result in a punishment</div>
+    `;
+    document.body.appendChild(panel);
+
+    const $loops = panel.querySelector('#kg-ab-loops');
+    const $logs = panel.querySelector('#kg-ab-logs');
+    const $start = panel.querySelector('#kg-ab-start');
+    const $pause = panel.querySelector('#kg-ab-pause');
+    const $close = panel.querySelector('.close');
+    const $math = panel.querySelector('#kg-ab-math');
+    const $eta = panel.querySelector('#kg-ab-eta');
+
+    let running=false, paused=false;
+    let etaInterval = null;
+    let etaSeconds = 0;
+
+    function log(msg) {
+      const d = new Date().toLocaleTimeString();
+      const el = document.createElement('div'); el.textContent = `[${d}] ${msg}`;
+      $logs.prepend(el); $logs.style.display='block';
+    }
+
+    function formatTime(sec) {
+      sec = Math.max(0, Math.round(sec || 0));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function stopCountdown() {
+      if (etaInterval) {
+        clearInterval(etaInterval);
+        etaInterval = null;
+      }
+    }
+
+    function startCountdown() {
+      if (etaInterval) clearInterval(etaInterval);
+
+      etaInterval = setInterval(() => {
+        if (!running || paused || etaSeconds <= 0) {
+          if (!running || etaSeconds <= 0) {
+              clearInterval(etaInterval);
+              etaInterval = null;
+              if (etaSeconds <= 0) $eta.textContent = '00:00:00';
+          }
+          return;
+        }
+
+        etaSeconds--;
+        $eta.textContent = formatTime(etaSeconds);
+
+      }, 1000);
+    }
+    function calculateTotalETASec(totalLoops, loopsCompleted) {
+        const remainingPurchases = totalLoops - loopsCompleted;
+        const intervalsNeeded = Math.max(0, remainingPurchases - 1);
+        return intervalsNeeded * INTERVAL_SEC;
+    }
+
+    function updateMath(currentLoop = 0) {
+      const loops = Math.max(1, parseInt($loops.value) || 1);
+
+      const price = PRICE[ctx.objectType];
+      const nonElite = CREATOR_NON_ELITE[ctx.objectType];
+      const elite = CREATOR_ELITE[ctx.objectType];
+      const totalCost = price * loops;
+      const totalNonElite = nonElite * loops;
+      const totalElite = elite * loops;
+
+      const currentLoopDisplay = currentLoop > 0
+        ? `<br/>Current Loop: <strong>${currentLoop}/${loops}</strong>`
+        : '';
+
+      $math.innerHTML = `
+        <div class="compact-header">
+          <strong>Object will be bought</strong> <span class="value">${loops} times</span><br/>
+          <strong>Cost per object is</strong> <span class="value">${price} gold</span><br/>
+          <strong>Total cost amounts to</strong> <span class="value">${totalCost} gold</span>
+          ${currentLoopDisplay}
+        </div>
+
+        <strong>Creator receives:</strong>
+
+        <div class="reward-grid">
+          <div class="reward-item">
+            <strong>If Elite:</strong><br/>
+            <span class="value">${totalElite} gold</span>
+          </div>
+          <div class="reward-item">
+            <strong>If Non Elite:</strong><br/>
+            <span class="value">${totalNonElite} gold</span>
+          </div>
+        </div>
+      `;
+
+      if (!running) {
+        const totalInitialETASec = calculateTotalETASec(loops, 0);
+        etaSeconds = totalInitialETASec;
+        $eta.textContent = formatTime(etaSeconds);
+        stopCountdown();
+      }
+    }
+
+    $loops.addEventListener('input', () => updateMath(0));
+    updateMath();
+
+    btn.addEventListener('click', ()=>{ overlay.style.display='block'; panel.style.display='block'; });
+    $close.addEventListener('click', ()=>{
+        overlay.style.display='none';
+        panel.style.display='none';
+        running=false;
+        stopCountdown();
+        $pause.style.display='none';
+        panel.classList.remove('purchase-running', 'purchase-paused');
+        updateMath(0);
+    });
+    overlay.addEventListener('click', ()=>{
+        overlay.style.display='none';
+        panel.style.display='none';
+        running=false;
+        stopCountdown();
+        $pause.style.display='none';
+        panel.classList.remove('purchase-running', 'purchase-paused');
+        updateMath(0);
+    });
+
+    function purchaseOnce() {
+      const fetchURL = ctx.objectType==='avatar'
+        ? `https://www.kogama.com/model/market/a-${ctx.objectId}/purchase/`
+        : `https://www.kogama.com/model/market/i-${ctx.objectId}/purchase/`;
+      return fetch(fetchURL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) })
+        .then(r=>r.ok).catch(()=>false);
+    }
+
+    async function runLoop() {
+      if(running) return;
+      running=true; paused=false;
+      panel.classList.add('purchase-running');
+      panel.classList.remove('purchase-paused');
+      $logs.style.display='block';
+
+      const loops = Math.max(1, parseInt($loops.value)||1);
+      log(`Starting ${loops} purchases...`);
+      etaSeconds = calculateTotalETASec(loops, 0);
+      startCountdown();
+
+      for (let i=0;i<loops;i++){
+        while(paused) {
+            stopCountdown();
+            await new Promise(r=>setTimeout(r,500));
+        }
+
+        if (!etaInterval) startCountdown();
+        updateMath(i + 1);
+
+        const ok = await purchaseOnce();
+        log(ok?`✅ Success ${i+1}/${loops}`:`❌ Failed ${i+1}/${loops}`);
+
+        if (i < loops - 1) {
+            const newRemainingETASec = calculateTotalETASec(loops, i + 1);
+            etaSeconds = newRemainingETASec + INTERVAL_SEC;
+
+            await new Promise(res=>setTimeout(res, INTERVAL_MS));
+        } else {
+             etaSeconds = 0;
+        }
+      }
+      log('🎉 All purchases done.');
+      running=false;
+      stopCountdown();
+      panel.classList.remove('purchase-running', 'purchase-paused');
+      updateMath(loops);
+    }
+
+    $start.addEventListener('click', runLoop);
+    $pause.addEventListener('click', ()=>{
+      paused=!paused;
+      $pause.textContent = paused ? 'Resume' : 'Pause';
+      log(paused?'⏸️ Paused':'▶️ Resumed');
+      if (paused) {
+        panel.classList.add('purchase-paused');
+      } else {
+        panel.classList.remove('purchase-paused');
+        startCountdown();
+      }
+    });
+  });
+})();
