@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         UtilifyV2
-// @namespace    A scuffed quality of life addon for the WWW kogama >W<
-// @version      2.0.8
+// @namespace    wee woo wee woo
+// @version      2.0.9
 // @description  Slowly rewriting this addon because I want to feel useful.
-// @author       S
+// @author       S ( wintrspark )
 // @match        *://www.kogama.com/*
 // @icon         https://avatars.githubusercontent.com/u/143356794?v=4
 // @grant        GM_info
@@ -135,263 +135,198 @@
   });
 })();
 
+(async function() {
+    "use strict";
+    const SNOWFLAKE_SVGS = [
+        "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="white" d="M50,10 L55,45 L50,50 L45,45 Z M50,90 L55,55 L50,50 L45,55 Z M10,50 L45,55 L50,50 L45,45 Z M90,50 L55,55 L50,50 L55,45 Z M25,25 L45,45 L50,40 L40,30 Z M75,75 L55,55 L50,60 L60,70 Z M75,25 L55,45 L60,50 L70,40 Z M25,75 L45,55 L40,50 L30,60 Z"/><circle cx="50" cy="50" r="8" fill="white"/></svg>`),
+        "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="white"><rect x="47" y="5" width="6" height="90" rx="2"/><rect x="5" y="47" width="90" height="6" rx="2"/><rect x="47" y="5" width="6" height="90" rx="2" transform="rotate(45 50 50)"/><rect x="47" y="5" width="6" height="90" rx="2" transform="rotate(-45 50 50)"/><circle cx="50" cy="50" r="10" fill="white"/></g></svg>`)
+    ];
 
-(async function() { // bg + filters
-  "use strict";
+    const AVAILABLE_FILTERS = ["rain", "snow", "fireflies", "blur"];
 
-  const waitForElement = async (sel, timeout = 10000) => {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-      const el = document.querySelector(sel);
-      if (el) return el;
-      await new Promise(r => requestAnimationFrame(r));
-    }
-    throw new Error(`Element ${sel} not found`);
-  };
-
-  const effects = {
-    blur: el => el.style.filter = "blur(5px)",
-    none: el => { el.style.filter = "none"; el.style.opacity = "unset"; },
-    dark: (el, img) => el.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.9),rgba(0,0,0,0.7)),url("${img}")`,
-    rain: el => createRainEffect(el),
-    snow: el => createSnowEffect(el)
-  };
-
-
-const createRainEffect = (e) => {
-  const bg = document.createElement("div");
-  Object.assign(bg.style, {
-    position: "absolute", inset: "0", zIndex: "1",
-    backgroundImage: e.style.backgroundImage, backgroundSize: "cover", backgroundPosition: "center",
-    filter: e.style.filter
-  });
-  e.style.backgroundImage = "none";
-  e.style.filter = "none";
-
-  const container = document.createElement("div");
-  Object.assign(container.style, {
-    position: "absolute", inset: "0", pointerEvents: "none", zIndex: "2", overflow: "hidden"
-  });
-
-  let raf = 0;
-  const drops = [];
-  const MAX = 40; // max_amount
-
-  const spawn = () => {
-    if (drops.length > MAX) return;
-    const d = {
-      x: Math.random() * e.clientWidth,
-      y: -10,
-      len: Math.random() * 15 + 13,
-      vx: (Math.random() - 0.8) * 0.7, // slower sway
-      vy: Math.random() * 4.5 + 4, // slower fall
-      opacity: Math.random() * 0.4 + 0.3
+    const waitForElement = async (sel, timeout = 10000) => {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+            await new Promise(r => requestAnimationFrame(r));
+        }
+        throw new Error(`Element ${sel} not found`);
     };
-    drops.push(d);
-  };
 
-  const draw = () => {
-    if (!document.contains(e)) return cancel();
-    if (!container._canvas) {
-      const c = document.createElement("canvas");
-      c.style.width = "100%";
-      c.style.height = "100%";
-      c.width = e.clientWidth * devicePixelRatio;
-      c.height = e.clientHeight * devicePixelRatio;
-      c.style.pointerEvents = "none";
-      container.appendChild(c);
-      container._canvas = c;
-      container._ctx = c.getContext("2d");
+    let tooltip = null;
+    function showTooltip(target) {
+        if (tooltip) return;
+        tooltip = document.createElement("div");
+        Object.assign(tooltip.style, {
+            position: "fixed", zIndex: "10000", background: "rgba(20, 20, 20, 0.95)", color: "#fff",
+            padding: "10px 14px", borderRadius: "8px", border: "1px solid #555",
+            fontSize: "12px", boxShadow: "0 8px 24px rgba(0,0,0,0.6)", pointerEvents: "none",
+            transition: "opacity 0.2s", backdropFilter: "blur(5px)", fontFamily: "sans-serif"
+        });
+        tooltip.innerHTML = `<strong style="color: #00e5ff;">Available Effects:</strong><br>${AVAILABLE_FILTERS.join(", ")}`;
+        document.body.appendChild(tooltip);
+        updateTooltipPos(target);
     }
-    const c = container._canvas;
-    const ctx = container._ctx;
-    if (c.width !== e.clientWidth * devicePixelRatio || c.height !== e.clientHeight * devicePixelRatio) {
-      c.width = e.clientWidth * devicePixelRatio;
-      c.height = e.clientHeight * devicePixelRatio;
+
+    function updateTooltipPos(target) {
+        if (!tooltip) return;
+        const rect = target.getBoundingClientRect();
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.top - 55}px`;
     }
-    ctx.clearRect(0,0,c.width,c.height);
-    ctx.save();
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-    for (let i = 0; i < 2; i++) spawn(); // fewer new drops
-    for (let i = drops.length - 1; i >= 0; i--) {
-      const d = drops[i];
-      d.x += d.vx;
-      d.y += d.vy;
-      ctx.beginPath();
-      ctx.strokeStyle = `rgba(255,255,255,${d.opacity})`;
-      ctx.lineWidth = Math.max(1, d.len * 0.06);
-      ctx.shadowBlur = 2; // blur so its seems more real?
-      ctx.shadowColor = "rgba(255,255,255,0.5)";
-      ctx.moveTo(d.x, d.y);
-      ctx.lineTo(d.x + d.vx * 2, d.y + d.len);
-      ctx.stroke();
-      if (d.y - d.len > e.clientHeight + 20) drops.splice(i,1);
+
+    function removeTooltip() { if(tooltip) { tooltip.remove(); tooltip = null; } }
+
+    class ParticleSystem {
+        constructor(targetEl) {
+            this.target = targetEl;
+            this.canvas = document.createElement("canvas");
+            this.ctx = this.canvas.getContext("2d", { alpha: true });
+            this.dpr = window.devicePixelRatio || 1;
+            this.particles = [];
+
+            this.container = document.createElement("div");
+            Object.assign(this.container.style, {
+                position: "absolute", pointerEvents: "none", zIndex: "9999", overflow: "hidden"
+            });
+
+            this.canvas.style.width = "100%";
+            this.canvas.style.height = "100%";
+            this.container.appendChild(this.canvas);
+
+            document.body.appendChild(this.container);
+
+            this.observer = new ResizeObserver(() => this.resize());
+            this.observer.observe(this.target);
+
+            this.loop = this.loop.bind(this);
+        }
+
+        resize() {
+            const r = this.target.getBoundingClientRect();
+            this.container.style.top = r.top + window.scrollY + "px";
+            this.container.style.left = r.left + window.scrollX + "px";
+            this.container.style.width = r.width + "px";
+            this.container.style.height = r.height + "px";
+
+            this.w = r.width; this.h = r.height;
+            this.canvas.width = this.w * this.dpr;
+            this.canvas.height = this.h * this.dpr;
+            this.ctx.scale(this.dpr, this.dpr);
+        }
+
+        start() {
+            this.resize();
+            this.initParticles();
+            this.rafId = requestAnimationFrame(this.loop);
+            window.addEventListener("scroll", () => this.resize());
+        }
+
+        loop() {
+            if (!document.contains(this.container)) return;
+            this.ctx.clearRect(0, 0, this.w, this.h);
+            this.updateAndDraw();
+            this.rafId = requestAnimationFrame(this.loop);
+        }
     }
-    ctx.restore();
-    raf = requestAnimationFrame(draw);
-  };
 
-  const cancel = () => {
-    if (raf) cancelAnimationFrame(raf);
-    container.remove();
-    bg.remove();
-  };
-
-  e.appendChild(bg);
-  e.appendChild(container);
-  draw();
-
-  const obs = new MutationObserver(() => { if (!document.contains(e)) { obs.disconnect(); cancel(); }});
-  obs.observe(document.body, { childList: true, subtree: true });
-};
-
-
-const createSnowEffect = (e) => {
-  const bg = document.createElement("div");
-  Object.assign(bg.style, {
-    position: "absolute", inset: "0", zIndex: "1",
-    backgroundImage: e.style.backgroundImage, backgroundSize: "cover", backgroundPosition: "center",
-    filter: e.style.filter
-  });
-  e.style.backgroundImage = "none";
-  e.style.filter = "none";
-
-  const container = document.createElement("div");
-  Object.assign(container.style, {
-    position: "absolute", inset: "0", pointerEvents: "none", zIndex: "2", overflow: "hidden"
-  });
-
-  const canvas = document.createElement("canvas");
-  canvas.style.width = "100%";
-  canvas.style.height = "100%";
-  canvas.width = Math.max(1, e.clientWidth * devicePixelRatio);
-  canvas.height = Math.max(1, e.clientHeight * devicePixelRatio);
-  container.appendChild(canvas);
-  const ctx = canvas.getContext("2d");
-
-  const FLAKES = Math.min(40, Math.max(16, Math.floor((e.clientWidth * e.clientHeight) / 80000))); // lower quantity
-  const flakes = [];
-  const now = () => performance.now();
-  let last = now();
-  let raf = 0;
-
-  const makeFlake = () => ({
-    x: Math.random() * canvas.width / devicePixelRatio,
-    y: Math.random() * canvas.height / devicePixelRatio - canvas.height / devicePixelRatio,
-    r: Math.random() * 2 + 1,
-    vx: (Math.random() - 0.5) * 0.3, // slower
-    vy: Math.random() * 0.5 + 0.2,   // slower
-    sway: Math.random() * 20 + 5,    // subtle sway
-    phase: Math.random() * Math.PI * 2,
-    opacity: Math.random() * 0.5 + 0.3
-  });
-
-  for (let i = 0; i < FLAKES; i++) flakes.push(makeFlake());
-
-  const resizeIfNeeded = () => {
-    const w = Math.max(1, e.clientWidth * devicePixelRatio);
-    const h = Math.max(1, e.clientHeight * devicePixelRatio);
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
+    class RainSystem extends ParticleSystem {
+        initParticles() { for (let i = 0; i < 50; i++) this.particles.push(this.reset({})); }
+        reset(p) { p.x = Math.random() * this.w; p.y = Math.random() * -this.h; p.z = Math.random() * 0.5 + 0.5; p.len = Math.random() * 15 + 10; p.vy = (Math.random() * 6 + 10) * p.z; return p; }
+        updateAndDraw() {
+            this.ctx.lineWidth = 1.2; this.ctx.lineCap = "round"; this.ctx.strokeStyle = "rgba(255,255,255,0.35)";
+            this.ctx.beginPath();
+            for (let p of this.particles) {
+                p.y += p.vy; if (p.y > this.h + p.len) this.reset(p);
+                this.ctx.moveTo(p.x, p.y); this.ctx.lineTo(p.x, p.y + p.len * p.z);
+            }
+            this.ctx.stroke();
+        }
     }
-  };
 
-  const step = () => {
-    if (!document.contains(e)) return cancel();
-    resizeIfNeeded();
-    const nowT = now();
-    const dt = Math.min(40, nowT - last) / 1000;
-    last = nowT;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.save();
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-    for (let i = 0; i < flakes.length; i++) {
-      const f = flakes[i];
-      f.phase += dt;
-      f.x += f.vx + Math.sin(f.phase) * (f.sway * 0.01);
-      f.y += f.vy;
-      if (f.y - f.r > canvas.height / devicePixelRatio + 10 || f.x < -50 || f.x > (canvas.width / devicePixelRatio) + 50) {
-        flakes[i] = makeFlake();
-        flakes[i].y = -10;
-      }
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
-      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-      ctx.fill();
+    class SnowSystem extends ParticleSystem {
+        constructor(target) { super(target); this.imgs = SNOWFLAKE_SVGS.map(src => { const i = new Image(); i.src = src; return i; }); this.start(); }
+        initParticles() { for (let i = 0; i < 400; i++) this.particles.push(this.reset({})); }
+        reset(p) {
+            p.x = Math.random() * this.w; p.y = Math.random() * -this.h; p.z = Math.random() * 0.5 + 0.5;
+            p.size = (Math.random() * 12 + 10) * p.z; p.vy = (Math.random() * 0.7 + 0.4) * p.z;
+            p.sway = Math.random() * 0.06; p.swayOff = Math.random() * 6; p.rot = Math.random() * 360;
+            p.img = this.imgs[Math.floor(Math.random() * this.imgs.length)];
+            p.alpha = 0.5; return p;
+        }
+        updateAndDraw() {
+            for (let p of this.particles) {
+                p.y += p.vy; p.swayOff += p.sway; p.x += Math.sin(p.swayOff) * 0.5; p.rot += 0.4;
+                if (p.y > this.h + 20) this.reset(p);
+                this.ctx.save(); this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rot * Math.PI / 180);
+                this.ctx.globalAlpha = p.alpha;
+                if (p.img.complete) this.ctx.drawImage(p.img, -p.size/2, -p.size/2, p.size, p.size);
+                this.ctx.restore();
+            }
+        }
     }
-    ctx.restore();
-    raf = requestAnimationFrame(step);
-  };
 
-  const cancel = () => {
-    if (raf) cancelAnimationFrame(raf);
-    container.remove();
-    bg.remove();
-  };
-
-  e.appendChild(bg);
-  e.appendChild(container);
-  step();
-
-  const obs = new MutationObserver(() => {
-    if (!document.contains(e)) {
-      obs.disconnect();
-      cancel();
+    class FireflySystem extends ParticleSystem {
+        constructor(target) { super(target); this.start(); }
+        initParticles() { for (let i = 0; i < 20; i++) this.particles.push(this.reset({})); }
+        reset(p) { p.x = Math.random()*this.w; p.y = Math.random()*this.h; p.size = Math.random()*2+1; p.vx=(Math.random()-0.5)*0.4; p.vy=(Math.random()-0.5)*0.4; p.alpha=Math.random(); return p; }
+        updateAndDraw() { for (let p of this.particles) { p.x+=p.vx; p.y+=p.vy; p.alpha+=(Math.random()-0.5)*0.05; if(p.x>this.w)p.x=0;if(p.y>this.h)p.y=0;if(p.alpha>0.8)p.alpha=0.8;if(p.alpha<0.2)p.alpha=0.2; this.ctx.fillStyle=`rgba(255,255,150,${p.alpha})`; this.ctx.shadowBlur=5; this.ctx.shadowColor="yellow"; this.ctx.beginPath(); this.ctx.arc(p.x,p.y,p.size,0,Math.PI*2); this.ctx.fill(); } }
     }
-  });
-  obs.observe(document.body, { childList: true, subtree: true });
 
-
-    const onResize = () => resizeIfNeeded();
-    window.addEventListener("resize", onResize);
-    container._cleanup = () => window.removeEventListener("resize", onResize);
-  };
-
-  async function applyEffects() {
-    try {
-      const d = await waitForElement('div._9smi2 > div.MuiPaper-root._1rJI8.MuiPaper-rounded > div._1aUa_');
-      const m = /(?:\|\|)?Background:\s*(\d+)(?:,\s*filter:\s*([a-z, ]+))?;?(?:\|\|)?/i.exec(d.textContent || "");
-      if (!m) return;
-
-      const img = await fetchImage(m[1]);
-      const b = document.querySelector('._33DXe');
-      if (!b) return;
-
-      const fadeIn = () => b.style.opacity = '1';
-      b.style.transition = 'opacity 0.28s ease-in';
-      b.style.opacity = '0';
-      b.style.backgroundImage = `
-        linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.3) 100%),
-        url("${img}")
-      `;
-      b.style.backgroundSize = 'cover';
-      b.style.backgroundPosition = 'center';
-      setTimeout(fadeIn, 300);
-
-      (m[2] || "").split(',').map(s => s.trim()).filter(Boolean).forEach(f => {
-        if (effects[f]) effects[f](b, img);
-      });
-    } catch (err) {
-      // silent fail
+    async function fetchImage(id) {
+        try {
+            const r = await fetch(`https://www.kogama.com/games/play/${id}/`);
+            const h = await r.text();
+            const j = JSON.parse(h.match(/options\.bootstrap\s*=\s*({.*?});/s)[1]);
+            return j.object?.images?.large || Object.values(j.object?.images || {})[0] || "";
+        } catch { return ""; }
     }
-  }
 
-  async function fetchImage(id) {
-    const r = await fetch(`https://www.kogama.com/games/play/${id}/`);
-    const h = await r.text();
-    const m = h.match(/options\.bootstrap\s*=\s*({.*?});/s);
-    if (!m) return "";
-    try {
-      const j = JSON.parse(m[1]);
-      return j.object?.images?.large || Object.values(j.object?.images || {})[0] || "";
-    } catch {
-      return "";
+    async function applyEffects() {
+        try {
+            const d = await waitForElement('div._1aUa_');
+            const m = /(?:\|\|)?Background:\s*(\d+)(?:,\s*filter:\s*([a-z, ]+))?;?(?:\|\|)?/i.exec(d.textContent || "");
+            if (!m) return;
+
+            const img = await fetchImage(m[1]);
+            const b = document.querySelector('._33DXe');
+            if (!b || !img) return;
+
+            b.style.transition = 'opacity 0.28s ease-in';
+            b.style.opacity = '0.9';
+            b.style.backgroundImage = `url("${img}")`;
+            b.style.backgroundSize = 'cover';
+            b.style.backgroundPosition = 'center';
+            b.style.backgroundRepeat = 'no-repeat';
+            b.style.position = 'absolute';
+            b.style.filter = 'blur(3px)';
+            b.style.zIndex = '1';
+            if (m[2]) {
+                m[2].split(',').map(s=>s.trim().toLowerCase()).forEach(f=>{
+                    if(f==="rain") new RainSystem(b).start();
+                    if(f==="snow") new SnowSystem(b);
+                    if(f==="fireflies") new FireflySystem(b);
+                });
+            }
+        } catch (err) { console.error(err); }
     }
-  }
+    const inputObserver = new MutationObserver(() => {
+        const area = document.querySelector('textarea#description');
+        if(area && !area._monitored) {
+            area._monitored = true;
+            area.addEventListener('input', (e) => {
+                if(e.target.value.toLowerCase().includes('filter:')) showTooltip(e.target);
+                else removeTooltip();
+            });
+            area.addEventListener('blur', removeTooltip);
+        }
+    });
+    inputObserver.observe(document.body, { childList: true, subtree: true });
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyEffects);
-  else applyEffects();
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", applyEffects);
+    else applyEffects();
+
 })();
 
 (async () => { // Profile Banner & Gradient - Utilify Exclusive
@@ -480,19 +415,21 @@ const createSnowEffect = (e) => {
   }
 })();
 
-(function() { // Copy Description - Utilify Exclusive
+(function() { // Copy Description
     let observer;
     let buttonAdded = false;
+
     function addCopyButton() {
         if (buttonAdded) return;
-        const bioContainer = document.querySelector('.MuiPaper-root h2');
-        if (!bioContainer || !bioContainer.textContent.includes('Bio') || bioContainer.querySelector('.aero-copy-btn')) {
-            return;
-        }
+        const bioContent = document.querySelector('div[itemprop="description"]');
+        if (!bioContent) return;
+        const bioContainer = bioContent.parentElement.querySelector('h2');
+        if (!bioContainer || bioContainer.querySelector('.aero-copy-btn')) return;
+
         const btn = document.createElement('button');
         btn.className = 'aero-copy-btn';
         btn.innerHTML = '⎘';
-        btn.title = 'Copy Bio';
+        btn.title = 'Copy';
         btn.style.cssText = `
             margin-left: 12px;
             width: 26px;
@@ -510,39 +447,36 @@ const createSnowEffect = (e) => {
             justify-content: center;
             vertical-align: middle;
             transition: all 0.2s ease;
-            box-shadow:
-                0 1px 1px rgba(0,0,0,0.1),
-                inset 0 1px 1px rgba(255,255,255,0.7);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.7);
             position: relative;
             top: -1px;
         `;
+
         btn.onmouseenter = () => {
             btn.style.background = 'rgba(220,240,255,0.95)';
             btn.style.boxShadow = '0 1px 3px rgba(0,120,215,0.3)';
         };
         btn.onmouseleave = () => {
             btn.style.background = 'rgba(255,255,255,0.85)';
-            btn.style.boxShadow = `
-                0 1px 1px rgba(0,0,0,0.1),
-                inset 0 1px 1px rgba(255,255,255,0.7)
-            `;
+            btn.style.boxShadow = '0 1px 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.7)';
         };
+
         btn.onclick = async () => {
-            const bioContent = document.querySelector('div[itemprop="description"]')?.innerText.trim() || '';
+            const textToCopy = bioContent.innerText.trim() || '';
             try {
-                await navigator.clipboard.writeText(bioContent);
-                showAeroNotification('Bio copied to clipboard!');
+                await navigator.clipboard.writeText(textToCopy);
+                showAeroNotification('Copied to clipboard!');
             } catch (err) {
                 console.error('Failed to copy:', err);
             }
         };
+
         bioContainer.style.display = 'inline-flex';
         bioContainer.style.alignItems = 'center';
         bioContainer.appendChild(btn);
+
         buttonAdded = true;
-        if (observer) {
-            observer.disconnect();
-        }
+        if (observer) observer.disconnect();
     }
 
     function showAeroNotification(message) {
@@ -558,16 +492,13 @@ const createSnowEffect = (e) => {
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.8);
             border-radius: 20px;
-            box-shadow:
-                0 2px 10px rgba(0,0,0,0.15),
-                inset 0 1px 1px rgba(255,255,255,0.5);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.5);
             color: #333;
             font: 13px 'Segoe UI', system-ui, sans-serif;
             z-index: 9999;
             opacity: 0;
             transition: opacity 0.3s ease;
         `;
-
         document.body.appendChild(notif);
         setTimeout(() => { notif.style.opacity = '1'; }, 10);
         setTimeout(() => {
@@ -575,18 +506,12 @@ const createSnowEffect = (e) => {
             setTimeout(() => notif.remove(), 300);
         }, 2000);
     }
+
     addCopyButton();
     if (!buttonAdded) {
         observer = new MutationObserver(addCopyButton);
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        setTimeout(() => {
-            if (observer) {
-                observer.disconnect();
-            }
-        }, 10000);
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => { if (observer) observer.disconnect(); }, 10000);
     }
 })();
 (() => { // Last Created, Last Seen, Last Played Game, InternetArchive
@@ -756,7 +681,7 @@ function modifyLogo() {
         const logoLink = logoContainer.querySelector('a');
         if (logoLink) {
             logoLink.title = "You're using UtilifyV2 by Simon! Thank you!";
-            logoLink.href = "https://github.com/midweststatic";
+            logoLink.href = "https://github.com/wintrspark";
             const logoImg = logoLink.querySelector('img');
             if (logoImg) {
                 logoImg.classList.add('utilify-logo-mod');
@@ -788,8 +713,8 @@ function modifyLogo() {
     const CACHE_KEY = "UConfig";
     const SETTINGS_BUTTON_ID = "utilifyv2_settings_btn";
     const SETTINGS_CONTAINER_ID = "utilifyv2_settings_container";
-    const UPDATE_RAW_URL = "https://raw.githubusercontent.com/midweststatic/Utilify/main/Script/Rewrite/Utilify.user.js";
-    const UPDATE_REPO_URL = "https://github.com/midweststatic/Utilify/raw/refs/heads/main/Script/Rewrite/Utilify.user.js";
+    const UPDATE_RAW_URL = "https://raw.githubusercontent.com/wintrspark/Utilify/main/Script/Rewrite/Utilify.user.js";
+    const UPDATE_REPO_URL = "https://github.com/wintrspark/Utilify/raw/refs/heads/main/Script/Rewrite/Utilify.user.js";
 
     const defaultConfig = {
       gradient: null,
@@ -1318,7 +1243,7 @@ function teardownStreakKeeper() {
       if (!s) { s = document.createElement("style"); s.id = "utilifyv2_glass_style"; document.head.appendChild(s); }
       if (!cfg.glassPanels || !cfg.glassPanels.enabled) { s.textContent = ""; return; }
       const { radius, hue, alpha } = cfg.glassPanels;
-      s.textContent = `.css-1udp1s3, .css-zslu1c, .css-1rbdj9p { background-color: hsla(${hue},68%,43%,${alpha}) !important; backdrop-filter: blur(3px) !important; border-radius: ${radius}px !important; }
+      s.textContent = `.css-wog98n, .css-o4yc28, .css-z05bui, .css-1udp1s3, .css-zslu1c, .css-1rbdj9p { background-color: hsla(${hue},68%,43%,${alpha}) !important; backdrop-filter: blur(3px) !important; border-radius: ${radius}px !important; }
   ._3TORb { background-color: hsla(${hue},68%,43%,${alpha}) !important; border-radius: ${radius}px !important; }`;
     }
 
@@ -2620,269 +2545,322 @@ async function checkForUpdatesUI(panel) {
 
 GM_addStyle(`
 ._1RMYS { display: none !important; }
+._3-qgq ._2uIZL { background-color: hsla(0, 5.9%, 13.3%, 0.51); }
+.css-e5yc1l { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
+.css-1995t1d { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
 `);
 
 
-
+// AV Finder (fixed loading + proper card rendering)
 ;(function () {
 	"use strict"
 
-	if (
-		!/^https:\/\/www\.kogama\.com\/profile\/\d+\/avatars\/?$/.test(
-			window.location.href,
-		)
-	) {
-		return
+	if (!/^https:\/\/www\.kogama\.com\/profile\/\d+\/avatars\/?$/.test(location.href)) return
+
+	const PAGE_COUNT = 400
+	const MAX_PAGES = 25
+	const CONCURRENCY = 3
+	const BATCH_DELAY = 180
+
+	let modal = null
+	let overlay = null
+	let closeBtn = null
+	let fetching = false
+	let controller = null
+
+	function base(u) {
+		return u ? u.split("?")[0] : ""
 	}
 
-	function addButtonsToAvatar(avatar) {
-		if (avatar.querySelector(".rf76-0v")) {
+	function openMarketplace(o) {
+		window.open(`https://www.kogama.com/marketplace/avatar/${o.product_id}/`, "_blank")
+	}
+
+	function abortFetch() {
+		if (controller) {
+			controller.abort()
+			controller = null
+		}
+		fetching = false
+	}
+
+	function ensurePanel() {
+		if (modal) {
+			modal.style.display = "grid"
+			overlay.style.display = "block"
+			closeBtn.style.display = "block"
 			return
 		}
-		const avatarNameElement = avatar.querySelector("._2uIZL")
-		const avatarName = avatarNameElement.textContent.trim()
-		const backgroundImageStyle = avatar
-			.querySelector("._3Up3H")
-			.getAttribute("style")
-		const imageUrlMatch = backgroundImageStyle.match(/url\("([^"]+)"\)/)
-		const imageUrl = imageUrlMatch ? imageUrlMatch[1] : ""
 
-		const marketplaceDiv = document.createElement("div")
-		marketplaceDiv.textContent = "Find"
-		marketplaceDiv.className = "rf76-0v"
-		marketplaceDiv.style.cssText = `
-            position: absolute;
-            bottom: 15%;
-            left: 29%;
-            z-index: 999;
-            width: 100px;
-            height: 30px;
-            line-height: 30px;
-            text-align: center;
-            cursor: pointer;
-            color: #fff;
-            background-color: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            transition: background-color 0.3s ease-in-out, letter-spacing 0.3s ease-in-out, width 0.3s ease-in-out;
-        `
-		marketplaceDiv.addEventListener("mouseenter", () => {
-			marketplaceDiv.style.backgroundColor = "rgba(0, 0, 0, 0.4)"
-			marketplaceDiv.style.width = "90px"
-		})
-		marketplaceDiv.addEventListener("mouseleave", () => {
-			marketplaceDiv.style.backgroundColor = "rgba(255, 255, 255, 0.3)"
-			marketplaceDiv.style.width = "100px"
-		})
+		overlay = document.createElement("div")
+		overlay.className = "rf76-overlay"
+		overlay.onclick = closePanel
 
-		marketplaceDiv.addEventListener("click", function () {
-			const requestUrl = `https://www.kogama.com/model/market/?page=1&count=7000&order=undefined&category=avatar&orderBy=created&q=${encodeURIComponent(
-				avatarName,
-			)}`
+		modal = document.createElement("div")
+		modal.className = "rf76-panel"
 
-			fetch(requestUrl)
-				.then(response => response.json())
-				.then(data => {
-					if (data.data.length === 1) {
-						openMarketplacePage(data.data[0])
-					} else {
-						let foundMatch = false
-						const results = []
-						for (const object of data.data) {
-							if (getBaseUrl(object.image_large) === getBaseUrl(imageUrl)) {
-								foundMatch = true
-								openMarketplacePage(object)
-								break
-							}
-							results.push(object)
-						}
-						if (!foundMatch) {
-							showModal(results)
-						}
+		closeBtn = document.createElement("div")
+		closeBtn.className = "rf76-close"
+		closeBtn.textContent = "✕"
+		closeBtn.onclick = closePanel
+
+		document.body.append(overlay, modal, closeBtn)
+	}
+
+	function closePanel() {
+		if (!modal) return
+		abortFetch()
+		modal.style.display = "none"
+		overlay.style.display = "none"
+		closeBtn.style.display = "none"
+	}
+
+	function createLoading() {
+		const loadingWrapper = document.createElement("div")
+		loadingWrapper.className = "rf76-loading-wrapper"
+
+		const loading = document.createElement("div")
+		loading.className = "rf76-loading"
+
+		loading.innerHTML = `<div class="rf76-spinner"></div><div style="margin-top:6px;font-size:12px;color:#ccc;text-align:center;">Loading...</div>`
+		loadingWrapper.appendChild(loading)
+		return loadingWrapper
+	}
+
+	async function searchMarketplace(name, imageUrl) {
+		if (fetching) abortFetch()
+		fetching = true
+
+		controller = new AbortController()
+		ensurePanel()
+		modal.innerHTML = ""
+		const loadingWrapper = createLoading()
+		modal.appendChild(loadingWrapper)
+
+		let page = 1
+		let active = 0
+		let found = false
+
+		const run = async () => {
+			if (found || page > MAX_PAGES || controller.signal.aborted) return
+			active++
+
+			const url = `https://www.kogama.com/model/market/?page=${page}&count=${PAGE_COUNT}&category=avatar&q=${encodeURIComponent(name)}`
+			page++
+
+			try {
+				const res = await fetch(url, { signal: controller.signal })
+				const json = await res.json()
+				if (!json?.data?.length) {
+					found = true
+					return
+				}
+
+				// remove loading as soon as we have the first batch
+				if (modal.contains(loadingWrapper)) modal.removeChild(loadingWrapper)
+
+				// append all cards immediately
+				for (const item of json.data) {
+					if (controller.signal.aborted) break
+
+					const card = document.createElement("div")
+					card.className = "rf76-card"
+
+					const img = document.createElement("img")
+					img.src = item.image_large
+
+					const label = document.createElement("av")
+					label.textContent = item.name
+
+					card.onclick = () => openMarketplace(item)
+					card.append(img, label)
+					modal.appendChild(card)
+
+					// check match after appending
+					if (!found && base(item.image_large) === base(imageUrl)) {
+						found = true
+						openMarketplace(item)
+						closePanel()
+						break
 					}
-				})
-				.catch(error => {
-					console.error("Error fetching data:", error)
-				})
-		})
-
-		avatar.style.position = "relative"
-		avatar.appendChild(marketplaceDiv)
-	}
-
-	function openMarketplacePage(object) {
-		const productId = object.product_id
-		const marketplaceUrl = `https://www.kogama.com/marketplace/avatar/${productId}/`
-		window.open(marketplaceUrl, "_blank")
-	}
-
-	function getBaseUrl(url) {
-		return url ? url.split("?")[0] : ""
-	}
-
-	function rescanAvatars() {
-		const avatars = document.querySelectorAll(
-			".MuiGrid-root.MuiGrid-container.MuiGrid-spacing-xs-2 .MuiGrid-item",
-		)
-
-		avatars.forEach(avatar => {
-			addButtonsToAvatar(avatar)
-		})
-	}
-
-	function showModal(results) {
-		const existingModal = document.querySelector(".rf76-modal")
-		if (existingModal) {
-			existingModal.remove()
+				}
+			} catch (e) {
+				if (e.name !== "AbortError") console.error(e)
+			} finally {
+				active--
+				if (!found && !controller.signal.aborted) {
+					await new Promise(r => setTimeout(r, BATCH_DELAY))
+					if (active < CONCURRENCY) run()
+				}
+			}
 		}
 
-		const overlay = document.createElement("div")
-		overlay.className = "rf76-overlay"
-		overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
-        `
-		overlay.addEventListener("click", () => {
-			modal.remove()
-			overlay.remove()
-		})
+		for (let i = 0; i < CONCURRENCY; i++) run()
 
+		while (active > 0 && !controller.signal.aborted) {
+			await new Promise(r => setTimeout(r, 50))
+		}
 
-		const modal = document.createElement("div")
-		modal.className = "rf76-modal"
-		modal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px;
-            background-color: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
-            color: #000;
-            border-radius: 10px;
-            z-index: 9999;
-            width: 80%;
-            max-width: 800px;
-            max-height: 80%;
-            overflow-y: auto;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        `
-
-		const closeButton = document.createElement("div")
-		closeButton.textContent = "✖"
-		closeButton.className = "rf76-close"
-		closeButton.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.4);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        `
-		closeButton.addEventListener("click", () => {
-			modal.remove()
-			overlay.remove()
-		})
-
-		modal.appendChild(closeButton)
-		results.forEach(result => {
-			const resultDiv = document.createElement("div")
-			resultDiv.style.cssText = `
-                width: calc(50% - 10px);
-                margin-bottom: 20px;
-                position: relative;
-                overflow: hidden;
-                cursor: pointer;
-                transition: all 0.3s ease-in-out;
-            `
-
-			const avatarImg = document.createElement("img")
-			avatarImg.onload = () => {
-				avatarImg.style.opacity = "1"
-			}
-			avatarImg.onerror = error => {
-				console.error("Error loading image:", error)
-			}
-			avatarImg.src = result.image_large
-			avatarImg.style.cssText = `
-                width: 100%;
-                height: auto;
-                opacity: 0;
-                transition: opacity 0.3s ease-in-out;
-            `
-
-			const avatarLink = document.createElement("a")
-			avatarLink.href = `https://www.kogama.com/marketplace/avatar/${result.product_id}/`
-			avatarLink.textContent = result.name
-			avatarLink.style.cssText = `
-                position: absolute;
-                font-size: 30px;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #fff;
-                text-shadow: 0 0 4px #fff;
-                text-decoration: none;
-                opacity: 0;
-                transition: opacity 0.3s ease-in-out;
-            `
-
-			resultDiv.addEventListener("mouseenter", () => {
-				avatarImg.style.filter = "blur(7px)"
-				avatarLink.style.opacity = "1"
-			})
-
-			resultDiv.addEventListener("mouseleave", () => {
-				avatarImg.style.filter = "none"
-				avatarLink.style.opacity = "0"
-			})
-
-			resultDiv.appendChild(avatarImg)
-			resultDiv.appendChild(avatarLink)
-
-			modal.appendChild(resultDiv)
-		})
-
-		document.body.appendChild(overlay)
-		document.body.appendChild(modal)
+		fetching = false
 	}
 
-	window.addEventListener("load", function () {
-		setTimeout(function () {
-			rescanAvatars()
+	function enhanceAvatars() {
+		document.querySelectorAll(".MuiGrid-root.MuiGrid-container.MuiGrid-spacing-xs-2 .MuiGrid-item").forEach(avatar => {
+			if (avatar.querySelector("av")) return
 
-			setInterval(function () {
-				const missingButtons = document.querySelectorAll(".rf76-0v")
-				if (missingButtons.length === 0) {
-					rescanAvatars()
-				}
-			}, 2000)
-		}, 1000)
+			const wrap = avatar.querySelector("._2uIZL")
+			const span = wrap?.querySelector("span")
+			if (!span) return
+
+			const name = span.textContent.trim()
+			const style = avatar.querySelector("._3Up3H")?.getAttribute("style") || ""
+			const match = style.match(/url\("([^"]+)"\)/)
+			const imgUrl = match ? match[1] : ""
+
+			const av = document.createElement("av")
+			av.textContent = name
+			av.onclick = () => searchMarketplace(name, imgUrl)
+
+			wrap.innerHTML = ""
+			wrap.appendChild(av)
+		})
+	}
+
+	const style = document.createElement("style")
+	style.textContent = `
+av {
+	background: linear-gradient(90deg,#ff1d1d,#ff1eec,#fc22ea,#0f93ff,#00ffb3,#00ff00,#fffb21,#e69706,#ff1111);
+	background-size: 400% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: avflow 9s ease-in-out infinite;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+@keyframes avflow {
+	0% { background-position: 0% 50% }
+	50% { background-position: 100% 50% }
+	100% { background-position: 0% 50% }
+}
+
+.rf76-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0,0,0,0.65);
+	z-index: 9998;
+}
+
+.rf76-panel {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: min(1100px, 92vw);
+	max-height: 75vh;
+	padding: 16px;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 14px;
+	overflow-y: auto;
+	background: #0f1016;
+	border-radius: 14px;
+	box-shadow: 0 25px 70px rgba(0,0,0,0.85);
+	z-index: 9999;
+}
+
+.rf76-card {
+	background: #161823;
+	border-radius: 10px;
+	overflow: hidden;
+	transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.rf76-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 12px 28px rgba(0,0,0,0.6);
+}
+
+.rf76-card img {
+	width: 100%;
+	display: block;
+}
+
+.rf76-card av {
+	display: block;
+	padding: 8px 6px;
+	font-size: 13px;
+	text-align: center;
+}
+
+.rf76-close {
+	position: fixed;
+	top: 14px;
+	right: 18px;
+	font-size: 20px;
+	color: #fff;
+	cursor: pointer;
+	z-index: 10000;
+}
+
+.rf76-loading-wrapper {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 120px;
+	height: 80px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	z-index: 10001;
+}
+
+.rf76-spinner {
+	width: 30px;
+	height: 30px;
+	border: 3px solid rgba(255,255,255,0.2);
+	border-top: 3px solid #fff;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+`
+	document.head.appendChild(style)
+
+	window.addEventListener("load", () => {
+		setTimeout(() => {
+			enhanceAvatars()
+			setInterval(enhanceAvatars, 2000)
+		}, 800)
 	})
 })();
+
+
 (() => {
-  const map = { "24051519": "owner","17037147": "owner", "16947158": "friend", "36355": "friend", "669433161": "friend" };
-  const uid = location.pathname.match(/profile\/(\d+)\/?/)?.[1];
+  const map = {
+    "24051519": "owner",
+    "17037147": "owner",
+    "16947158": "friend",
+    "36355": "friend",
+    "669433161": "friend"
+  };
+
+  // Strict match: `/profile/<digits>/` only.
+  const match = location.pathname.match(/^\/profile\/(\d+)\/?$/);
+  const uid = match ? match[1] : null;
+
   if (!uid || !map[uid]) return;
 
   const badgeText = "Utilify Friend";
-  const creditText = `This profile is associated with Utilify as a whole. <br> Their presence made a difference. <br> <a href="https://github.com/midweststatic/Utilify/" target="_blank" rel="noopener noreferrer">GitHub</a>`;
-
+  const creditText = `This profile is associated with Utilify as a whole. <br> Their presence made a difference. <br> <a href="https://github.com/wintrspark/Utilify/" target="_blank" rel="noopener noreferrer">GitHub</a>`;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -2898,18 +2876,14 @@ GM_addStyle(`
       animation: rainbow_animation 10s ease-in-out infinite;
       background-size: 400% 100%;
       font-weight: bold;
-      }
-      ._2hUvr ._1T9vj { background-color: hsla(0, 0%, 0.8%, 0.52) !important; }
-      .css-bho9d5 {     color: rgba(0, 0, 0, 0.1) !important; }
-      .css-bho9d5 svg {
-    fill: #fff !important;
-    stroke: #fff !important;
-}
-      ._1u05O { color: white !important; }
-      ._1q4mD ._1sUGu ._1u05O ._3RptD { color: white !important; }
-      ._1dXzR {
-      max-height: 430px !important;
-      }
+    }
+    ._2hUvr ._1T9vj { background-color: hsla(0, 0%, 0.8%, 0.52) !important; }
+    .css-bho9d5 { color: rgba(0, 0, 0, 0.1) !important; }
+    .css-bho9d5 svg { fill: #fff !important; stroke: #fff !important; }
+    ._1u05O { color: white !important; }
+    ._1q4mD ._1sUGu ._1u05O ._3RptD { color: white !important; }
+    ._1dXzR { max-height: 430px !important; }
+
     .badge-panel {
       position: fixed;
       left: 50%;
@@ -2965,6 +2939,7 @@ GM_addStyle(`
   panel.appendChild(credit);
   document.body.appendChild(panel);
 })();
+
 
 
 (() => { // Leaderboard Fix, Credits to Zpayer as the idea was his lol
