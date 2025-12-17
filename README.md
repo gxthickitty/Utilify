@@ -30,15 +30,14 @@ The table below outlines features within the script that may violate the above g
 
 ***
 
-## 🗒️ Update Log - December 3, 2025 (v2.0.8)
+## 🗒️ Update Log - December 17, 2025 (v2.0.9)
 
-* **A) Configuration Menu Overhaul:** Create & Moved multiple options under ``Use At Own Risk`` Category.
-* **B) Feature Added:** Implemented [LazyStreakKeeper](https://github.com/midweststatic/LazyStreakKeeper).
-* **C) WebGL Fix:** SVG Button to add settings no longer displays and attaches to WebGL windows.
-* **D) Proper Credits:** Decided to finally creater proper Credits, kinda.
-* **E) Mass Purchase Tool V2:** An improved feature from UtilifyV1 to mass purchase th same avatar/model multiple times automatically.
+* **A) CSS fixes:** Fixed glass panels, notification div and a couple elements
+* **B) UerBGs:** Fixedd core logic, updated visual effects, added one new effect. (`snow`, `rain`, `fireflies`, `blur`)
+* **C) AvatarFinder:** Revert to an old avatar-finding logic with some small rewrite, now clickable avatar names instead of custom buttom
+* **D) Description copy:** Fixed selectors, now should work regardless the chosen page language
 
-> <img width="1735" height="1052" alt="{40022F24-8752-4BAD-A685-2B133E122A20}" src="https://github.com/user-attachments/assets/d242e11b-5fef-404c-a56a-aaf592823dba" />
+> <img width="1746" height="1061" alt="{7B72AF9D-6171-42F4-9F13-6A9DF8B9D962}" src="https://github.com/user-attachments/assets/8528f1e0-0a67-4135-83c2-954c2fe40f60" />
 
 ***
 
