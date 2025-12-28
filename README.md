@@ -73,7 +73,11 @@ Once your manager is ready, click the link below to install:
    > Usage example: ```background:i-Otrskld,filter:roses,rain;```   
    > Syntax: ```background:i-IMGID,filter:roses,rain;```   
    > So in our example by using `Otrskld` we can resolve:  ``i.imgur.com/Otrskld.jpeg``.   
-   > Supported: PNG, JPG, JPGED, GIF.   
+   > Supported: PNG, JPG, JPGED, GIF.
+   
+> [!WARNING]  
+> I am not responsible for any NSFW or inappropriate images being put up for any profile, it is outside of my control.
+   
 * **NEW:** Added **Roses** and **Ivy** particle effects.
 * **IMPROVED:** Redesigned the URL Obfuscation button to live *inside* the input field for a cleaner look.
 * **IMPROVED:** Optimized the Firefly system with pulsing glow effects and better performance.
@@ -82,3 +86,5 @@ Once your manager is ready, click the link below to install:
 * Core rewrite release including CSS fixes for glass panels and notification divs.
 * Fixed AvatarFinder logic and improved bio-copy selectors for multi-language support.
 * Introduced initial background effects: Snow, Rain, Fireflies, and Blur.
+
+<img width="1901" height="1066" alt="image" src="https://github.com/user-attachments/assets/439a2474-713d-4099-b1d2-e714ab2a6823" />
