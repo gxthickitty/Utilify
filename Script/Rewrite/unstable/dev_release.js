@@ -759,7 +759,7 @@
         }, 2000);
     }
 
-    addCopyButton(s);
+    addCopyButton();
     if (!buttonAdded) {
         observer = new MutationObserver(addCopyButton);
         observer.observe(document.body, { childList: true, subtree: true });
@@ -4475,6 +4475,7 @@ const RiskyFeatures = {
 
 GM_addStyle(`
 
+/* badges margin increase */ .css-15830to {margin-bottom: 23px !important;}
 .uwn5j  { 
     background-color: #171414 !important;
     border: none !important;
