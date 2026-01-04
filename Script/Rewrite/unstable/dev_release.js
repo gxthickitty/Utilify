@@ -5,6 +5,26 @@
 // @description  Slowly rewriting this addon because I want to feel useful.
 // @author       Simon
 // @match        *://www.kogama.com/*
+// @icon         https://i.imgur.com/tqAXRve.gif
+// @grant        GM_info
+// @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setClipboard
+// @connect      fonts.googleapis.com
+// @connect      kogama.com
+// @connect      kogama.com.br
+// @run-at       document-start
+// ==/UserScript==
+
+// ==UserScript==
+// @name         Unstable Utilify V3
+// @namespace    wee woo wee woo
+// @version      1.1.1
+// @description  Slowly rewriting this addon because I want to feel useful.
+// @author       Simon
+// @match        *://www.kogama.com/*
 // @icon         https://avatars.githubusercontent.com/u/143356794?v=4
 // @grant        GM_info
 // @grant        GM_addStyle
@@ -1592,273 +1612,340 @@ function modifyLogo() {
       }
     };
   
-    const RiskyFeatures = {
-      pulseBlocker: { installed: false },
-      friendActivity: { timer: null, observer: null, profileId: null },
-      playerType: { attached: false, observer: null },
-      streakKeeper: { timer: null },
-  
-      // Pulse blocker (appear offline)
-      installPulseBlocker() {
-        if (this.pulseBlocker.installed) return;
-        
-        window.__utilify_orig_xhr_open = XMLHttpRequest.prototype.open;
-        window.__utilify_orig_xhr_send = XMLHttpRequest.prototype.send;
-        window.__utilify_orig_fetch = window.fetch;
-  
-        XMLHttpRequest.prototype.open = function(method, url) {
-          this.__utilify_method = (method || '').toUpperCase();
-          this.__utilify_url = typeof url === 'string' ? url : null;
-          return window.__utilify_orig_xhr_open.apply(this, arguments);
-        };
-  
-        XMLHttpRequest.prototype.send = function(body) {
-          try {
-            if (this.__utilify_method === 'POST' && this.__utilify_url) {
-              const u = new URL(this.__utilify_url, location.href);
-              if (/^\/user\/\d+\/pulse\/?$/.test(u.pathname)) {
-                this.abort && this.abort();
-                return;
-              }
-            }
-          } catch {}
-          return window.__utilify_orig_xhr_send.apply(this, arguments);
-        };
-  
-        window.fetch = function(resource, init) {
-          try {
-            const method = (init?.method || 'GET').toUpperCase();
-            if (method === 'POST') {
-              const url = resource instanceof Request ? resource.url : resource;
-              const u = new URL(url, location.href);
-              if (/^\/user\/\d+\/pulse\/?$/.test(u.pathname)) {
-                return Promise.resolve(new Response(null, { status: 204 }));
-              }
-            }
-          } catch {}
-          return window.__utilify_orig_fetch.apply(this, arguments);
-        };
-  
-        this.pulseBlocker.installed = true;
-      },
-  
-      uninstallPulseBlocker() {
-        if (!this.pulseBlocker.installed) return;
-        if (window.__utilify_orig_xhr_open) XMLHttpRequest.prototype.open = window.__utilify_orig_xhr_open;
-        if (window.__utilify_orig_xhr_send) XMLHttpRequest.prototype.send = window.__utilify_orig_xhr_send;
-        if (window.__utilify_orig_fetch) window.fetch = window.__utilify_orig_fetch;
-        this.pulseBlocker.installed = false;
-      },
-  
-      // Friend Activity
-      async fetchGameTitle(gid, cache = {}) {
-        if (cache[gid]) return cache[gid];
+const RiskyFeatures = {
+    pulseBlocker: { installed: false },
+    friendActivity: { timer: null, observer: null, profileId: null },
+    playerType: { attached: false, observer: null },
+    streakKeeper: { timer: null },
+
+    // Pulse blocker (appear offline)
+    installPulseBlocker() {
+      if (this.pulseBlocker.installed) return;
+      
+      window.__utilify_orig_xhr_open = XMLHttpRequest.prototype.open;
+      window.__utilify_orig_xhr_send = XMLHttpRequest.prototype.send;
+      window.__utilify_orig_fetch = window.fetch;
+
+      XMLHttpRequest.prototype.open = function(method, url) {
+        this.__utilify_method = (method || '').toUpperCase();
+        this.__utilify_url = typeof url === 'string' ? url : null;
+        return window.__utilify_orig_xhr_open.apply(this, arguments);
+      };
+
+      XMLHttpRequest.prototype.send = function(body) {
         try {
-          const res = await fetch(`https://www.kogama.com/games/play/${gid}/`);
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const title = doc.querySelector('title')?.textContent.split(' - KoGaMa')[0]?.trim() || null;
-          if (title) cache[gid] = title;
-          return title;
-        } catch { return null; }
-      },
-  
-      async fetchProjectName(pid, cache = {}) {
-        if (cache[pid]) return cache[pid];
-        try {
-          const res = await fetch(`https://www.kogama.com/game/${pid}/member`);
-          if (!res.ok) return null;
-          const data = await res.json();
-          if (data.data?.length) {
-            const name = data.data[0].name;
-            cache[pid] = name;
-            return name;
+          if (this.__utilify_method === 'POST' && this.__utilify_url) {
+            const u = new URL(this.__utilify_url, location.href);
+            if (/^\/user\/\d+\/pulse\/?$/.test(u.pathname)) {
+              this.abort && this.abort();
+              return;
+            }
           }
         } catch {}
-        return null;
-      },
-  
-      updateFriendStatus(name, text) {
-        document.querySelectorAll('._1taAL').forEach(el => {
-          const nameEl = el.querySelector('._3zDi-');
-          const statusEl = el.querySelector('._40qZj');
-          if (nameEl?.textContent?.trim() === name && statusEl) {
-            statusEl.textContent = text;
-          }
-        });
-      },
-  
-      async processFriendEntry(entry, cache = { games: {}, projects: {} }) {
-        const nameEl = entry.querySelector('._3zDi-');
-        if (!nameEl) return;
-        const name = nameEl.textContent?.trim();
-        if (!name) return;
-  
-        const statusEl = entry.querySelector('._40qZj');
-        const loc = statusEl?.textContent?.trim() || entry.querySelector('a[href]')?.getAttribute('href');
-        if (!loc) return;
-  
-        const gameMatch = loc.match(/\/games\/play\/(\d+)\//);
-        if (gameMatch) {
-          const title = await this.fetchGameTitle(gameMatch[1], cache.games);
-          if (title) this.updateFriendStatus(name, title);
-          return;
-        }
-  
-        const projectMatch = loc.match(/\/build\/\d+\/project\/(\d+)\//) || loc.match(/\/game\/(\d+)\/member/);
-        if (projectMatch) {
-          const nameText = await this.fetchProjectName(projectMatch[1], cache.projects);
-          if (nameText) this.updateFriendStatus(name, nameText);
-        }
-      },
-  
-      enableFriendActivity() {
-        if (this.friendActivity.observer) return;
-        
-        const profileId = getProfileIdFromBootstrap();
-        if (!profileId) return;
-  
-        this.friendActivity.profileId = profileId;
-        const cache = { games: {}, projects: {} };
-  
-        const scanList = (container) => {
-          container?.querySelectorAll('._1lvYU, ._1taAL').forEach(node => 
-            this.processFriendEntry(node, cache)
-          );
-        };
-  
-        const containers = ['._1Yhgq', '._3Wytz', 'div[role="list"]'];
-        let target = null;
-        for (const sel of containers) {
-          target = document.querySelector(sel);
-          if (target) break;
-        }
-  
-        if (target) {
-          scanList(target);
-          const mo = new MutationObserver(() => scanList(target));
-          mo.observe(target, { childList: true, subtree: true });
-          this.friendActivity.observer = mo;
-        }
-      },
-  
-      disableFriendActivity() {
-        if (this.friendActivity.observer) {
-          this.friendActivity.observer.disconnect();
-          this.friendActivity.observer = null;
-        }
-      },
-  
-      // Player Type Display
-      async renderPlayerChip(el) {
-        if (!el) return;
+        return window.__utilify_orig_xhr_send.apply(this, arguments);
+      };
+
+      window.fetch = function(resource, init) {
         try {
-          const res = await fetch(location.href);
-          const html = await res.text();
-          const m = html.match(/playing_now_members["']\s*:\s*(\d+).*?playing_now_tourists["']\s*:\s*(\d+)/s);
-          const counts = m ? { members: +m[1], tourists: +m[2] } : { members: 0, tourists: 0 };
-          
-          el.innerHTML = '';
-          el.style.cssText = `
-            background: linear-gradient(135deg, rgba(255, 192, 203, 0.15), rgba(200, 190, 220, 0.1));
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 192, 203, 0.2);
-            border-radius: 12px;
-            padding: 8px 16px;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            color: #e8e8ee;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-            font-size: 13px;
-          `;
-  
-          const total = counts.members + counts.tourists;
-          el.innerHTML = `
-            <span style="font-weight:600; color:#ffc0cb;">Global: ${total}</span>
-            <span style="color:#c8bed8;">Players: ${counts.members}</span>
-            <span style="color:#a8a8b8;">Tourists: ${counts.tourists}</span>
-          `;
-        } catch {}
-      },
-  
-      enablePlayerTypeDisplay() {
-        if (!location.pathname.includes('/games/play/')) return;
-        if (this.playerType.attached) return;
-  
-        const selectors = ['.MuiChip-colorPrimary', '.PlayerCountChip', '[data-player-chip]'];
-        const findAndRender = () => {
-          for (const sel of selectors) {
-            const chip = document.querySelector(sel);
-            if (chip) {
-              this.renderPlayerChip(chip);
-              this.playerType.attached = true;
-              return true;
+          const method = (init?.method || 'GET').toUpperCase();
+          if (method === 'POST') {
+            const url = resource instanceof Request ? resource.url : resource;
+            const u = new URL(url, location.href);
+            if (/^\/user\/\d+\/pulse\/?$/.test(u.pathname)) {
+              return Promise.resolve(new Response(null, { status: 204 }));
             }
           }
-          return false;
-        };
-  
-        if (findAndRender()) return;
-  
-        const mo = new MutationObserver(() => {
-          if (findAndRender()) mo.disconnect();
-        });
-        mo.observe(document.body, { childList: true, subtree: true });
-        this.playerType.observer = mo;
-      },
-  
-      disablePlayerTypeDisplay() {
-        if (this.playerType.observer) {
-          this.playerType.observer.disconnect();
-          this.playerType.observer = null;
+        } catch {}
+        return window.__utilify_orig_fetch.apply(this, arguments);
+      };
+
+      this.pulseBlocker.installed = true;
+    },
+
+    uninstallPulseBlocker() {
+      if (!this.pulseBlocker.installed) return;
+      if (window.__utilify_orig_xhr_open) XMLHttpRequest.prototype.open = window.__utilify_orig_xhr_open;
+      if (window.__utilify_orig_xhr_send) XMLHttpRequest.prototype.send = window.__utilify_orig_xhr_send;
+      if (window.__utilify_orig_fetch) window.fetch = window.__utilify_orig_fetch;
+      this.pulseBlocker.installed = false;
+    },
+
+    // --- Friend Activity Logic (Fixed) ---
+
+    // Cache to store game/project names so we don't spam fetch
+    cache: { games: {}, projects: {} },
+
+    async fetchGameTitle(gid) {
+      if (this.cache.games[gid]) return this.cache.games[gid];
+      try {
+        const res = await fetch(`https://www.kogama.com/games/play/${gid}/`);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const title = doc.querySelector('title')?.textContent.split(' - KoGaMa')[0]?.trim() || null;
+        if (title) this.cache.games[gid] = title;
+        return title;
+      } catch { return null; }
+    },
+
+    async fetchProjectName(pid) {
+      if (this.cache.projects[pid]) return this.cache.projects[pid];
+      try {
+        const res = await fetch(`https://www.kogama.com/game/${pid}/member`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.data?.length) {
+          const name = data.data[0].name;
+          this.cache.projects[pid] = name;
+          return name;
         }
-        this.playerType.attached = false;
-      },
-  
-      // Lazy Streak Keeper
-      enableStreakKeeper() {
-        if (this.streakKeeper.timer) return;
-  
-        const userId = getProfileIdFromBootstrap();
-        if (!userId) return;
-  
-        const TARGET = 670350173;
-        const INTERVAL = 7 * 60 * 60 * 1000;
-        const MESSAGES = [
-          "you are so loved <3",
-          "streak check in, hi!",
-          "keeping the streak alive <3",
-          "quick hello from your streak bot"
-        ];
-  
-        const sendMessage = async () => {
-          const lastSent = parseInt(localStorage.getItem('ls_last_sent') || '0');
-          if (Date.now() - lastSent < INTERVAL) return;
-  
-          try {
-            const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-            await fetch(`https://www.kogama.com/chat/${userId}/`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to_profile_id: TARGET, message: msg })
-            });
-            localStorage.setItem('ls_last_sent', Date.now().toString());
-          } catch {}
-        };
-  
-        sendMessage();
-        this.streakKeeper.timer = setInterval(sendMessage, 60 * 1000);
-      },
-  
-      disableStreakKeeper() {
-        if (this.streakKeeper.timer) {
-          clearInterval(this.streakKeeper.timer);
-          this.streakKeeper.timer = null;
+      } catch {}
+      return null;
+    },
+
+    updateFriendStatus(name, text) {
+      // Updates the DOM text for a specific username
+      document.querySelectorAll('._1taAL').forEach(el => {
+        const nameEl = el.querySelector('._3zDi-');
+        const statusEl = el.querySelector('._40qZj');
+        if (nameEl?.textContent?.trim() === name && statusEl) {
+          statusEl.textContent = text;
         }
+      });
+    },
+
+    // The API Fetcher (Restored from your snippet)
+    async fetchFriendChat() {
+      if (!this.friendActivity.profileId) return;
+      try {
+        const res = await fetch(`https://www.kogama.com/user/${this.friendActivity.profileId}/friend/chat/`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          data.data.forEach(friend => {
+            const username = friend.username;
+            const loc = friend.location || '/';
+            
+            // Check for Game
+            const gameMatch = loc.match(/\/games\/play\/(\d+)\//);
+            if (gameMatch) {
+              this.fetchGameTitle(gameMatch[1]).then(title => {
+                if (title) this.updateFriendStatus(username, title);
+              });
+            }
+
+            // Check for Project
+            const projectMatch = loc.match(/\/build\/\d+\/project\/(\d+)\//) || loc.match(/\/game\/(\d+)\/member/);
+            if (projectMatch) {
+              this.fetchProjectName(projectMatch[1]).then(nameText => {
+                if (nameText) this.updateFriendStatus(username, nameText);
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Utilify Friend Fetch Error:', err);
       }
-    };
+    },
+
+    // Process DOM nodes immediately (in case links exist)
+    processFriendEntry(entry) {
+      const nameEl = entry.querySelector('._3zDi-');
+      if (!nameEl) return;
+      const name = nameEl.textContent?.trim();
+      
+      const statusEl = entry.querySelector('._40qZj');
+      // Look for ID in text OR in href
+      const loc = statusEl?.textContent?.trim() || entry.querySelector('a[href]')?.getAttribute('href');
+      
+      if (!loc) return;
+
+      const gameMatch = loc.match(/\/games\/play\/(\d+)\//);
+      if (gameMatch) {
+        this.fetchGameTitle(gameMatch[1]).then(title => {
+          if (title) this.updateFriendStatus(name, title);
+        });
+        return;
+      }
+
+      const projectMatch = loc.match(/\/build\/\d+\/project\/(\d+)\//) || loc.match(/\/game\/(\d+)\/member/);
+      if (projectMatch) {
+        this.fetchProjectName(projectMatch[1]).then(name => {
+          if (name) this.updateFriendStatus(name, name);
+        });
+      }
+    },
+
+    enableFriendActivity() {
+      // Prevent double activation
+      if (this.friendActivity.observer || this.friendActivity.timer) return;
+      
+      const profileId = getProfileIdFromBootstrap();
+      if (!profileId) return;
+
+      this.friendActivity.profileId = profileId;
+
+      // 1. Initial API Fetch
+      this.fetchFriendChat();
+
+      // 2. Start Polling Interval (every 30s)
+      this.friendActivity.timer = setInterval(() => {
+        this.fetchFriendChat();
+      }, 30000);
+
+      // 3. Observer for scrolling/loading DOM elements
+      const scanList = (container) => {
+        container?.querySelectorAll('._1lvYU, ._1taAL').forEach(node => 
+          this.processFriendEntry(node)
+        );
+      };
+
+      const containers = ['._1Yhgq', '._3Wytz', 'div[role="list"]'];
+      let target = null;
+      for (const sel of containers) {
+        target = document.querySelector(sel);
+        if (target) break;
+      }
+
+      if (target) {
+        scanList(target);
+        const mo = new MutationObserver((mutations) => {
+          for (const m of mutations) {
+             m.addedNodes.forEach(node => {
+               if (node.nodeType === 1 && (node.matches?._1lvYU || node.querySelector?._1lvYU)) {
+                 this.processFriendEntry(node);
+               }
+             });
+          }
+        });
+        mo.observe(target, { childList: true, subtree: true });
+        this.friendActivity.observer = mo;
+      }
+    },
+
+    disableFriendActivity() {
+      if (this.friendActivity.observer) {
+        this.friendActivity.observer.disconnect();
+        this.friendActivity.observer = null;
+      }
+      if (this.friendActivity.timer) {
+        clearInterval(this.friendActivity.timer);
+        this.friendActivity.timer = null;
+      }
+    },
+
+    // --- End Friend Activity ---
+
+    // Player Type Display
+    async renderPlayerChip(el) {
+      if (!el) return;
+      try {
+        const res = await fetch(location.href);
+        const html = await res.text();
+        const m = html.match(/playing_now_members["']\s*:\s*(\d+).*?playing_now_tourists["']\s*:\s*(\d+)/s);
+        const counts = m ? { members: +m[1], tourists: +m[2] } : { members: 0, tourists: 0 };
+        
+        el.innerHTML = '';
+        el.style.cssText = `
+          background: linear-gradient(135deg, rgba(255, 192, 203, 0.15), rgba(200, 190, 220, 0.1));
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 192, 203, 0.2);
+          border-radius: 12px;
+          padding: 8px 16px;
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          color: #e8e8ee;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+          font-size: 13px;
+        `;
+
+        const total = counts.members + counts.tourists;
+        el.innerHTML = `
+          <span style="font-weight:600; color:#ffc0cb;">Global: ${total}</span>
+          <span style="color:#c8bed8;">Players: ${counts.members}</span>
+          <span style="color:#a8a8b8;">Tourists: ${counts.tourists}</span>
+        `;
+      } catch {}
+    },
+
+    enablePlayerTypeDisplay() {
+      if (!location.pathname.includes('/games/play/')) return;
+      if (this.playerType.attached) return;
+
+      const selectors = ['.MuiChip-colorPrimary', '.PlayerCountChip', '[data-player-chip]'];
+      const findAndRender = () => {
+        for (const sel of selectors) {
+          const chip = document.querySelector(sel);
+          if (chip) {
+            this.renderPlayerChip(chip);
+            this.playerType.attached = true;
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (findAndRender()) return;
+
+      const mo = new MutationObserver(() => {
+        if (findAndRender()) mo.disconnect();
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+      this.playerType.observer = mo;
+    },
+
+    disablePlayerTypeDisplay() {
+      if (this.playerType.observer) {
+        this.playerType.observer.disconnect();
+        this.playerType.observer = null;
+      }
+      this.playerType.attached = false;
+    },
+
+    // Lazy Streak Keeper
+    enableStreakKeeper() {
+      if (this.streakKeeper.timer) return;
+
+      const userId = getProfileIdFromBootstrap();
+      if (!userId) return;
+
+      const TARGET = 670350173;
+      const INTERVAL = 7 * 60 * 60 * 1000;
+      const MESSAGES = [
+        "you are so loved <3",
+        "streak check in, hi!",
+        "keeping the streak alive <3",
+        "quick hello from your streak bot"
+      ];
+
+      const sendMessage = async () => {
+        const lastSent = parseInt(localStorage.getItem('ls_last_sent') || '0');
+        if (Date.now() - lastSent < INTERVAL) return;
+
+        try {
+          const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+          await fetch(`https://www.kogama.com/chat/${userId}/`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_profile_id: TARGET, message: msg })
+          });
+          localStorage.setItem('ls_last_sent', Date.now().toString());
+        } catch {}
+      };
+
+      sendMessage();
+      this.streakKeeper.timer = setInterval(sendMessage, 60 * 1000);
+    },
+
+    disableStreakKeeper() {
+      if (this.streakKeeper.timer) {
+        clearInterval(this.streakKeeper.timer);
+        this.streakKeeper.timer = null;
+      }
+    }
+  };
 
     const UI = {
       panel: null,
