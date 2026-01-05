@@ -1,5 +1,3 @@
-
-
 // ==UserScript==
 // @name         Unstable Utilify V3
 // @namespace    wee woo wee woo
@@ -19,6 +17,116 @@
 // @connect      kogama.com.br
 // @run-at       document-start
 // ==/UserScript==
+
+
+// Extra CSS: Useless Footers begone, small fixes & improvements.
+// DM BOX STYLES ARE HERE TOO, TEMPORARY HARD_CODED AND NOT PANEL HUE RELATED.
+
+GM_addStyle(`
+
+._1q4mD ._1sUGu ._1u05O { background: none !important; background-color: transparent !important;}
+/* badges margin increase */ .css-15830to {margin-bottom: 23px !important;}
+.uwn5j  { 
+    background-color: #171414 !important;
+    border: none !important;
+}
+._375XK ._2XaOw {
+    scrollbar-width: thin !important;
+    scrollbar-color: #C3B398 transparent !important;
+    background-color: #171414 !important;
+    border: none !important;
+}
+
+._375XK .F3PyX {
+    background-color: #171414 !important;
+    border: none !important;
+}
+._375XK ._2drTe textarea {
+    background-color: #171414 !important;
+    border: none !important;
+    color: #ffff !important;
+}
+.obf-wrap textarea:focus,
+.obf-wrap textarea:active {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+}
+
+.obf-wrap {
+    background: transparent !important;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+}
+
+.obf-wrap textarea {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    appearance: none;
+    resize: none;
+    padding: 12px;
+    color: #fff;
+}
+
+.obf-wrap textarea:focus {
+    outline: 0;
+    box-shadow: none;
+}
+
+
+MuiStack-root _2drTe css-u4p24i {
+    background-color: #171414 !important;
+    border: none !important;
+    color: #ffff !important;
+}
+
+
+._375XK ._2XaOw ._1j2Cd._1Xzzq p { /* our chat-bubble */
+    box-shadow: 0 0 4px #B59C6B !important;
+    border-radius: 13px !important;
+    background-color: #2E2D2C !important;
+    color: #fff !important;
+}
+
+._375XK ._2XaOw ._1j2Cd p { /* incoming chat-bubble */
+background-color: #302820 !important;
+box-shadow: 0 0 2px #D9C6A3 !important;
+color: #ffff !important;
+border-radius: 7px !important;
+}
+
+._375XK .F3PyX ._2XzvN, .uwn5j ._3DYYr ._28mON header { color: #DEAB54 !important; }
+.uwn5j ._3DYYr ._1j2Cd { display: none !important; }
+
+
+
+
+._1RMYS { display: none !important; }
+._3-qgq ._2uIZL { background-color: hsla(0, 5.9%, 13.3%, 0.51); }
+.css-e5yc1l { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
+.css-1995t1d { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
+.css-16dac4n { display: none !important; }
+.css-atlh4n { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
+.css-jm72ng {	background: linear-gradient(90deg,#ff1d1d,#ff1eec,#fc22ea,#0f93ff,#00ffb3,#00ff00,#fffb21,#e69706,#ff1111);
+	background-size: 400% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent !important;
+	animation: avflow 9s ease-in-out infinite;
+	font-weight: 700;
+	cursor: pointer;
+}
+@keyframes avflow {
+	0% { background-position: 0% 50% }
+	50% { background-position: 100% 50% }
+	100% { background-position: 0% 50% }
+} 
+`);
+
 (() => {
   "use strict";
 
@@ -667,103 +775,206 @@
   }
 })();
 
-(function() { // Copy Description
-    let observer;
+(function() { // copy description
+    'use strict';
+    
+    let observer = null;
     let buttonAdded = false;
+    const injectStyles = () => {
+        if (document.getElementById('ethereal-copy-style')) return;
+        
+        const css = `
+            @keyframes sparkle-pulse {
+                0%, 100% { opacity: 0.6; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.1); }
+            }
+            
+            @keyframes shimmer-sweep {
+                0% { background-position: -200% center; }
+                100% { background-position: 200% center; }
+            }
+            
+            @keyframes float-up {
+                from { opacity: 0; transform: translate(-50%, 10px); }
+                to { opacity: 1; transform: translate(-50%, 0); }
+            }
+            
+            .ethereal-copy-btn {
+                margin-left: 8px !important;
+                width: 26px !important;
+                height: 26px !important;
+                border: 1px solid rgba(255, 192, 203, 0.3) !important;
+                border-radius: 6px !important;
+                background: linear-gradient(135deg, rgba(255, 192, 203, 0.15), rgba(200, 190, 220, 0.1)) !important;
+                backdrop-filter: blur(8px) !important;
+                color: #ffc0cb !important;
+                font-size: 14px !important;
+                cursor: pointer !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                vertical-align: middle !important;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                position: relative !important;
+                top: -1px !important;
+                box-shadow: 0 2px 8px rgba(255, 192, 203, 0.2) !important;
+                overflow: hidden !important;
+            }
+            
+            .ethereal-copy-btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -200%;
+                width: 200%;
+                height: 100%;
+                background: linear-gradient(90deg, 
+                    transparent 0%, 
+                    rgba(255, 192, 203, 0.3) 50%, 
+                    transparent 100%);
+                transition: left 0.6s ease;
+            }
+            
+            .ethereal-copy-btn:hover {
+                background: linear-gradient(135deg, rgba(255, 192, 203, 0.25), rgba(200, 190, 220, 0.2)) !important;
+                border-color: rgba(255, 192, 203, 0.5) !important;
+                transform: translateY(-2px) !important;
+                box-shadow: 0 4px 16px rgba(255, 192, 203, 0.3) !important;
+            }
+            
+            .ethereal-copy-btn:hover::before {
+                left: 200%;
+            }
+            
+            .ethereal-copy-btn:active {
+                transform: translateY(0) !important;
+            }
+            
+            .ethereal-copy-btn-icon {
+                animation: sparkle-pulse 3s ease-in-out infinite;
+            }
+            
+            .ethereal-notification {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 12px 24px;
+                background: linear-gradient(135deg, rgba(255, 192, 203, 0.95) 0%, rgba(200, 190, 220, 0.9) 100%);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(255, 192, 203, 0.4);
+                color: #1a1b1e;
+                font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                z-index: 999999;
+                opacity: 0;
+                animation: float-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                pointer-events: none;
+            }
+            
+            .ethereal-notification::before {
+                content: '✓';
+                margin-right: 8px;
+                font-size: 14px;
+            }
+        `;
+        
+        const style = document.createElement('style');
+        style.id = 'ethereal-copy-style';
+        style.textContent = css;
+        document.head.appendChild(style);
+    };
 
-    function addCopyButton() {
+    const showNotification = (message) => {
+        document.querySelectorAll('.ethereal-notification').forEach(n => n.remove());
+        
+        const notif = document.createElement('div');
+        notif.className = 'ethereal-notification';
+        notif.textContent = message;
+        
+        document.body.appendChild(notif);
+        setTimeout(() => {
+            notif.style.opacity = '0';
+            notif.style.transform = 'translate(-50%, -10px)';
+            setTimeout(() => notif.remove(), 300);
+        }, 2000);
+    };
+
+    const addCopyButton = () => {
         if (buttonAdded) return;
         const bioContent = document.querySelector('div[itemprop="description"]');
         if (!bioContent) return;
-        const bioContainer = bioContent.parentElement.querySelector('h2');
-        if (!bioContainer || bioContainer.querySelector('.aero-copy-btn')) return;
-
+        
+        const bioContainer = bioContent.parentElement?.querySelector('h2');
+        if (!bioContainer) return;
+        if (bioContainer.querySelector('.ethereal-copy-btn')) {
+            buttonAdded = true;
+            return;
+        }
+        
         const btn = document.createElement('button');
-        btn.className = 'aero-copy-btn';
-        btn.innerHTML = '⎘';
-        btn.title = 'Copy';
-        btn.style.cssText = `
-            margin-left: 12px;
-            width: 26px;
-            height: 26px;
-            border: none;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(8px);
-            color: #333;
-            font-size: 14px;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            vertical-align: middle;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.7);
-            position: relative;
-            top: -1px;
-        `;
-
-        btn.onmouseenter = () => {
-            btn.style.background = 'rgba(220,240,255,0.95)';
-            btn.style.boxShadow = '0 1px 3px rgba(0,120,215,0.3)';
-        };
-        btn.onmouseleave = () => {
-            btn.style.background = 'rgba(255,255,255,0.85)';
-            btn.style.boxShadow = '0 1px 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.7)';
-        };
-
-        btn.onclick = async () => {
-            const textToCopy = bioContent.innerText.trim() || '';
+        btn.className = 'ethereal-copy-btn';
+        btn.title = 'Copy bio to clipboard';
+        btn.innerHTML = '<span class="ethereal-copy-btn-icon">⎘</span>';
+        
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            
+            const textToCopy = bioContent.innerText?.trim() || '';
+            
+            if (!textToCopy) {
+                showNotification('Bio is empty');
+                return;
+            }
+            
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                showAeroNotification('Copied to clipboard!');
+                showNotification('Copied to clipboard');
+                btn.style.transform = 'translateY(-2px) scale(0.95)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 150);
             } catch (err) {
                 console.error('Failed to copy:', err);
+                showNotification('Copy failed');
             }
-        };
-
+        });
+        
         bioContainer.style.display = 'inline-flex';
         bioContainer.style.alignItems = 'center';
         bioContainer.appendChild(btn);
-
         buttonAdded = true;
-        if (observer) observer.disconnect();
-    }
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+    };
 
-    function showAeroNotification(message) {
-        const notif = document.createElement('div');
-        notif.textContent = message;
-        notif.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 6px 20px;
-            background: rgba(240,248,255,0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.8);
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.5);
-            color: #333;
-            font: 13px 'Segoe UI', system-ui, sans-serif;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(notif);
-        setTimeout(() => { notif.style.opacity = '1'; }, 10);
-        setTimeout(() => {
-            notif.style.opacity = '0';
-            setTimeout(() => notif.remove(), 300);
-        }, 2000);
-    }
-
-    addCopyButton();
-    if (!buttonAdded) {
-        observer = new MutationObserver(addCopyButton);
-        observer.observe(document.body, { childList: true, subtree: true });
-        setTimeout(() => { if (observer) observer.disconnect(); }, 10000);
+    const init = () => {
+        injectStyles();
+        addCopyButton();
+        if (!buttonAdded) {
+            observer = new MutationObserver(() => {
+                addCopyButton();
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            setTimeout(() => {
+                if (observer) {
+                    observer.disconnect();
+                    observer = null;
+                }
+            }, 10000);
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();
 
@@ -1204,7 +1415,8 @@ function modifyLogo() {
 })();
 
 
-(function() { // Feed Manager
+
+(function() {
   'use strict';
   function getBootstrapData() {
     const scripts = document.querySelectorAll('script');
@@ -1674,7 +1886,7 @@ function modifyLogo() {
       const bioHeader = document.querySelector('h2');
       if (!bioHeader) return;
       
-      const copyBtn = bioHeader.querySelector('.aero-copy-btn');
+      const copyBtn = bioHeader.querySelector('.ethereal-copy-btn');
       if (!copyBtn) return;
       
       clearInterval(checkBio);
@@ -2128,6 +2340,336 @@ function modifyLogo() {
 
   injectStyles();
   createButton();
+})();
+
+(function() { // Update Scan
+  'use strict';
+  
+  const UPDATE_CHECK_URL = 'https://raw.githubusercontent.com/gxthickitty/Utilify/refs/heads/main/Script/Rewrite/Utilify.user.js';
+  const INSTALL_URL = 'https://github.com/gxthickitty/Utilify/raw/refs/heads/main/Script/Rewrite/Utilify.user.js';
+  const CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  const STORAGE_KEY = 'utilify_last_update_check';
+  function injectStyles() {
+    if (document.getElementById('update-checker-style')) return;
+    
+    const css = `
+      @keyframes sparkle-rotate {
+        0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.6; }
+        50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+      }
+      
+      @keyframes float-in {
+        from { 
+          opacity: 0; 
+          transform: translate(-50%, 20px) scale(0.9);
+        }
+        to { 
+          opacity: 1; 
+          transform: translate(-50%, 0) scale(1);
+        }
+      }
+      
+      @keyframes shimmer-bg {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      
+      .update-notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999999;
+        padding: 16px 24px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 192, 203, 0.95) 0%,
+          rgba(200, 190, 220, 0.95) 50%,
+          rgba(255, 192, 203, 0.95) 100%
+        );
+        background-size: 200% 100%;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        box-shadow: 
+          0 8px 32px rgba(255, 192, 203, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        animation: float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 420px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .update-notification.shimmer {
+        animation: float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+                   shimmer-bg 3s linear infinite;
+      }
+      
+      .update-icon {
+        font-size: 28px;
+        animation: sparkle-rotate 3s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      
+      .update-content {
+        flex: 1;
+      }
+      
+      .update-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1a1b1e;
+        margin-bottom: 4px;
+        letter-spacing: 0.3px;
+      }
+      
+      .update-message {
+        font-size: 13px;
+        color: rgba(26, 27, 30, 0.8);
+        line-height: 1.4;
+      }
+      
+      .update-version {
+        font-weight: 600;
+        color: #1a1b1e;
+      }
+      
+      .update-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      
+      .update-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+        border: none;
+      }
+      
+      .update-btn-primary {
+        background: rgba(26, 27, 30, 0.9);
+        color: #ffc0cb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      
+      .update-btn-primary:hover {
+        background: #1a1b1e;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      
+      .update-btn-secondary {
+        background: rgba(255, 255, 255, 0.4);
+        color: #1a1b1e;
+      }
+      
+      .update-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.6);
+        transform: translateY(-1px);
+      }
+      
+      .update-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        border: none;
+        color: #1a1b1e;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+      }
+      
+      .update-close:hover {
+        background: rgba(255, 255, 255, 0.5);
+        transform: scale(1.1);
+      }
+    `;
+    
+    const style = document.createElement('style');
+    style.id = 'update-checker-style';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+  function getInstalledVersion() {
+    try {
+      if (typeof GM_info !== 'undefined' && GM_info?.script?.version) {
+        return GM_info.script.version;
+      }
+    } catch {}
+    return null;
+  }
+  
+  function parseVersion(versionString) {
+    if (!versionString) return [0, 0, 0];
+    const parts = versionString.split('.').map(n => parseInt(n) || 0);
+    while (parts.length < 3) parts.push(0);
+    return parts;
+  }
+  
+  function compareVersions(current, remote) {
+    const c = parseVersion(current);
+    const r = parseVersion(remote);
+    
+    for (let i = 0; i < 3; i++) {
+      if (r[i] > c[i]) return 1; // Remote is newer
+      if (r[i] < c[i]) return -1; // Current is newer
+    }
+    return 0;
+  }
+
+  async function fetchRemoteVersion() {
+    try {
+      const response = await fetch(UPDATE_CHECK_URL, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Accept': 'text/plain'
+        }
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const text = await response.text();
+      const match = text.match(/@version\s+([^\s\n]+)/);
+      
+      return match ? match[1].trim() : null;
+    } catch (err) {
+      console.error('Update check failed:', err);
+      return null;
+    }
+  }
+
+  function showUpdateNotification(currentVersion, remoteVersion) {
+    document.querySelectorAll('.update-notification').forEach(n => n.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = 'update-notification shimmer';
+    
+    notification.innerHTML = `
+      <button class="update-close" aria-label="Dismiss">×</button>
+      <div class="update-icon">✦</div>
+      <div class="update-content">
+        <div class="update-title">Update Available!</div>
+        <div class="update-message">
+          <span class="update-version">v${remoteVersion}</span> is ready
+          ${currentVersion ? ` (you have v${currentVersion})` : ''}
+        </div>
+      </div>
+      <div class="update-actions">
+        <a href="${INSTALL_URL}" class="update-btn update-btn-primary" target="_blank" rel="noopener">
+          Update Now
+        </a>
+        <button class="update-btn update-btn-secondary" id="update-dismiss">
+          Later
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    notification.querySelector('.update-close').addEventListener('click', () => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translate(-50%, -20px) scale(0.9)';
+      setTimeout(() => notification.remove(), 300);
+    });
+    
+    notification.querySelector('#update-dismiss').addEventListener('click', () => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translate(-50%, -20px) scale(0.9)';
+      setTimeout(() => notification.remove(), 300);
+    });
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -20px) scale(0.9)';
+        setTimeout(() => notification.remove(), 300);
+      }
+    }, 30000);
+  }
+  function shouldCheckForUpdates() {
+    try {
+      const lastCheck = localStorage.getItem(STORAGE_KEY);
+      if (!lastCheck) return true;
+      
+      const lastCheckTime = parseInt(lastCheck);
+      const now = Date.now();
+      
+      return (now - lastCheckTime) >= CHECK_INTERVAL;
+    } catch {
+      return true;
+    }
+  }
+  
+  function updateLastCheckTime() {
+    try {
+      localStorage.setItem(STORAGE_KEY, Date.now().toString());
+    } catch {}
+  }
+  
+  async function checkForUpdates(force = false) {
+    if (!force && !shouldCheckForUpdates()) {
+      console.log('Update check: Skipping (checked recently)');
+      return;
+    }
+    
+    console.log('Update check: Starting...');
+    
+    const currentVersion = getInstalledVersion();
+    if (!currentVersion) {
+      console.log('Update check: Cannot determine installed version');
+      return;
+    }
+    
+    const remoteVersion = await fetchRemoteVersion();
+    if (!remoteVersion) {
+      console.log('Update check: Failed to fetch remote version');
+      return;
+    }
+    
+    console.log(`Update check: Current v${currentVersion}, Remote v${remoteVersion}`);
+    
+    const comparison = compareVersions(currentVersion, remoteVersion);
+    
+    if (comparison > 0) {
+      console.log('Update check: Update available!');
+      showUpdateNotification(currentVersion, remoteVersion);
+    } else if (comparison === 0) {
+      console.log('Update check: Up to date');
+    } else {
+      console.log('Update check: Local version is newer');
+    }
+    
+    updateLastCheckTime();
+  }
+  window.UtilifyUpdateChecker = {
+    check: () => checkForUpdates(true),
+    getVersion: getInstalledVersion
+  };
+  function init() {
+    injectStyles();   
+    setTimeout(() => checkForUpdates(), 2000);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 
 (function() { // config, settings
@@ -2697,7 +3239,7 @@ function modifyLogo() {
         }
         const { radius, hue, alpha } = cfg.glassPanels;
         this.inject('utilify_glass', `
-          ._3TORb ._2E1AL .tRx6U, .css-1wbcikz, .css-wog98n, .css-o4yc28, .css-z05bui,  {
+          ._3TORb ._2E1AL .tRx6U, .css-1wbcikz, .css-wog98n, .css-o4yc28, .css-z05bui, ._1q4mD {
             background-color: hsla(${hue},68%,43%,${alpha}) !important;
             backdrop-filter: blur(6px) !important;
             border-radius: ${radius}px !important;
@@ -3057,49 +3599,98 @@ const RiskyFeatures = {
       this.playerType.attached = false;
     },
 
-    // Lazy Streak Keeper
-    enableStreakKeeper() {
-      if (this.streakKeeper.timer) return;
+// Lazy Streak Keeper
+enableStreakKeeper() {
+  if (this.streakKeeper.timer) return;
 
-      const userId = getProfileIdFromBootstrap();
-      if (!userId) return;
+  const userId = getProfileIdFromBootstrap();
+  if (!userId) return;
 
-      const TARGET = 670350173;
-      const INTERVAL = 7 * 60 * 60 * 1000;
-      const MESSAGES = [
-        "you are so loved <3",
-        "streak check in, hi!",
-        "keeping the streak alive <3",
-        "quick hello from your streak bot"
-      ];
+  const TARGET = 670350173;
+  const INTERVAL = 7 * 60 * 60 * 1000;
+  const POLL_INTERVAL = 60 * 1000;
 
-      const sendMessage = async () => {
-        const lastSent = parseInt(localStorage.getItem('ls_last_sent') || '0');
-        if (Date.now() - lastSent < INTERVAL) return;
+  const INITIAL_HISTORY_DELAY_MS = 1000;
+  const HISTORY_RETRY_DELAY_MS = 10 * 1000;
+  const RESPONSE_WAIT_MS = 3 * 60 * 1000;
+  const SECOND_RESPONSE_WAIT_MS = 60 * 1000;
 
-        try {
-          const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-          await fetch(`https://www.kogama.com/chat/${userId}/`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to_profile_id: TARGET, message: msg })
-          });
-          localStorage.setItem('ls_last_sent', Date.now().toString());
-        } catch {}
-      };
+  const MESSAGES = [
+    "you are so loved <3",
+    "streak check in, hi!",
+    "keeping the streak alive <3",
+    "quick hello from your streak bot"
+  ];
 
-      sendMessage();
-      this.streakKeeper.timer = setInterval(sendMessage, 60 * 1000);
-    },
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-    disableStreakKeeper() {
-      if (this.streakKeeper.timer) {
-        clearInterval(this.streakKeeper.timer);
-        this.streakKeeper.timer = null;
-      }
-    }
+  const postChat = async message => {
+    await fetch(`https://www.kogama.com/chat/${userId}/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_profile_id: TARGET, message })
+    });
   };
+
+  const fetchHistory = async () => {
+    const r = await fetch(
+      `https://www.kogama.com/chat/${userId}/history/${TARGET}/`,
+      { credentials: 'include' }
+    );
+    return r.json().catch(() => null);
+  };
+
+  const waitForReply = async timeoutMs => {
+    const start = Date.now();
+    await sleep(INITIAL_HISTORY_DELAY_MS);
+
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const h = await fetchHistory();
+        if (h && Array.isArray(h.data) && h.data[0]?.from_profile_id == TARGET) {
+          return h.data[0];
+        }
+      } catch {}
+      await sleep(HISTORY_RETRY_DELAY_MS);
+    }
+    return null;
+  };
+
+  const sendMessage = async () => {
+    const lastSent = parseInt(localStorage.getItem('ls_last_sent') || '0');
+    if (Date.now() - lastSent < INTERVAL) return;
+
+    try {
+      const msg1 = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+      await postChat(msg1);
+      localStorage.setItem('ls_last_sent', Date.now().toString());
+
+      const reply1 = await waitForReply(RESPONSE_WAIT_MS);
+      if (!reply1) return;
+
+      const msg2 = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+      await postChat(msg2);
+
+      const reply2 = await waitForReply(SECOND_RESPONSE_WAIT_MS);
+      if (!reply2) return;
+
+      const msg3 = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+      await postChat(msg3);
+    } catch {}
+  };
+
+  sendMessage();
+  this.streakKeeper.timer = setInterval(sendMessage, POLL_INTERVAL);
+},
+
+disableStreakKeeper() {
+  if (this.streakKeeper.timer) {
+    clearInterval(this.streakKeeper.timer);
+    this.streakKeeper.timer = null;
+  }
+}
+};
 
     const UI = {
       panel: null,
@@ -4469,115 +5060,6 @@ const RiskyFeatures = {
     run();
   })();
   
-
-// Extra CSS: Useless Footers begone, small fixes & improvements.
-// DM BOX STYLES ARE HERE TOO, TEMPORARY HARD_CODED AND NOT PANEL HUE RELATED.
-
-GM_addStyle(`
-
-/* badges margin increase */ .css-15830to {margin-bottom: 23px !important;}
-.uwn5j  { 
-    background-color: #171414 !important;
-    border: none !important;
-}
-._375XK ._2XaOw {
-    scrollbar-width: thin !important;
-    scrollbar-color: ##C3B398 transparent !important;
-    background-color: #171414 !important;
-    border: none !important;
-}
-
-._375XK .F3PyX {
-    background-color: #171414 !important;
-    border: none !important;
-}
-._375XK ._2drTe textarea {
-    background-color: #171414 !important;
-    border: none !important;
-    color: #ffff !important;
-}
-.obf-wrap textarea:focus,
-.obf-wrap textarea:active {
-    border: 0;
-    outline: 0;
-    box-shadow: none;
-}
-
-.obf-wrap {
-    background: transparent !important;
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-}
-
-.obf-wrap textarea {
-    flex: 1;
-    background: transparent;
-    border: 0;
-    outline: 0;
-    box-shadow: none;
-    appearance: none;
-    resize: none;
-    padding: 12px;
-    color: #fff;
-}
-
-.obf-wrap textarea:focus {
-    outline: 0;
-    box-shadow: none;
-}
-
-
-MuiStack-root _2drTe css-u4p24i {
-    background-color: #171414 !important;
-    border: none !important;
-    color: #ffff !important;
-}
-
-
-._375XK ._2XaOw ._1j2Cd._1Xzzq p { /* our chat-bubble */
-    box-shadow: 0 0 4px #B59C6B !important;
-    border-radius: 13px !important;
-    background-color: #2E2D2C !important;
-    color: #fff !important;
-}
-
-._375XK ._2XaOw ._1j2Cd p { /* incoming chat-bubble */
-background-color: #302820 !important;
-box-shadow: 0 0 2px #D9C6A3 !important;
-color: #ffff !important;
-border-radius: 7px !important;
-}
-
-._375XK .F3PyX ._2XzvN, .uwn5j ._3DYYr ._28mON header { color: #DEAB54 !important; }
-.uwn5j ._3DYYr ._1j2Cd { display: none !important; }
-
-
-
-
-._1RMYS { display: none !important; }
-._3-qgq ._2uIZL { background-color: hsla(0, 5.9%, 13.3%, 0.51); }
-.css-e5yc1l { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
-.css-1995t1d { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
-.css-16dac4n { display: none !important; }
-.css-atlh4n { background-color: transparent !important; text-shadow: 0 0 4px #fff !important; }
-.css-jm72ng {	background: linear-gradient(90deg,#ff1d1d,#ff1eec,#fc22ea,#0f93ff,#00ffb3,#00ff00,#fffb21,#e69706,#ff1111);
-	background-size: 400% 100%;
-	-webkit-background-clip: text;
-	background-clip: text;
-	color: transparent !important;
-	animation: avflow 9s ease-in-out infinite;
-	font-weight: 700;
-	cursor: pointer;
-}
-@keyframes avflow {
-	0% { background-position: 0% 50% }
-	50% { background-position: 100% 50% }
-	100% { background-position: 0% 50% }
-} 
-`);
-
-
 // AV Finder (fixed loading + proper card rendering)
 ;(function () {
 	"use strict"
@@ -5147,504 +5629,4 @@ av {
   installObserver();
 
   Object.defineProperty(window, 'kogamaLeaderboardInstalled', { value: true, configurable: false });
-})();
-
-(function tamperAutoBuyerIIFE() {
-  // Only run on avatar/model pages
-  const urlPath = location.pathname || '';
-  if (!/^\/marketplace\/(model\/i-\d+\/|avatar\/a-\d+\/)/i.test(urlPath)) return;
-
-  const ctx = (() => {
-    const m1 = urlPath.match(/^\/marketplace\/avatar\/a-(\d+)\/?/i);
-    if (m1) return { objectType: 'avatar', objectId: m1[1] };
-    const m2 = urlPath.match(/^\/marketplace\/model\/i-(\d+)\/?/i);
-    if (m2) return { objectType: 'model', objectId: m2[1] };
-    return null;
-  })();
-  if (!ctx) return;
-
-  const PRICE = { avatar: 140, model: 10 };
-  const CREATOR_NON_ELITE = { avatar: 14, model: 1 };
-  const CREATOR_ELITE = { avatar: 98, model: 7 };
-  const INTERVAL_MS = 30000;
-  const INTERVAL_SEC = INTERVAL_MS / 1000; // 30 seconds
-
-  function css(id, rules) {
-    if (document.getElementById(id)) return;
-    const s = document.createElement('style');
-    s.id = id;
-    s.textContent = rules;
-    document.head.appendChild(s);
-  }
-
-  css('kg-autobuy-styles', `
-    /* Main Button Styling */
-    #kg-ab-btn {
-      margin-right: 8px;
-      background: #f8d26f;
-      color: #1f1f1f;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-    }
-    #kg-ab-btn:hover {
-      background: #ffd36a;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-    }
-
-    /* Overlay */
-    #kg-ab-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      z-index: 99998;
-      display: none;
-      backdrop-filter: blur(4px);
-    }
-
-    /* Panel */
-    #kg-ab-panel {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 450px;
-      max-width: 95%;
-      background: #2a2a2a;
-      color: #e0e0e0;
-      border-radius: 16px;
-      z-index: 99999;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.8);
-      padding: 20px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: none;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    /* Header */
-    #kg-ab-panel .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      font-weight: 900;
-      font-size: 20px;
-      color: #f8d26f;
-      border-bottom: 2px solid rgba(248, 210, 111, 0.2);
-      padding-bottom: 10px;
-    }
-
-    /* Close Button */
-    #kg-ab-panel .close {
-      background: transparent;
-      border: none;
-      color: #e0e0e0;
-      font-size: 18px;
-      cursor: pointer;
-      transition: color 0.2s;
-      padding: 4px;
-      line-height: 1;
-    }
-    #kg-ab-panel .close:hover {
-      color: #ffd36a;
-    }
-
-    /* Labels */
-    #kg-ab-panel label {
-      display: block;
-      font-size: 14px;
-      color: #b0b0b0;
-      margin: 10px 0 6px 0;
-      font-weight: 600;
-    }
-
-    /* Input */
-    #kg-ab-panel input[type="number"] {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: #3c3c3c;
-      color: #fff;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-
-    /* Action Buttons */
-    #kg-ab-panel .btn {
-      margin-top: 15px;
-      width: 100%;
-      padding: 12px 12px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      font-weight: 800;
-      background: #f8d26f;
-      color: #1f1f1f;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      transition: all 0.2s ease;
-    }
-    #kg-ab-panel .btn:hover {
-      background: #ffd36a;
-    }
-
-    /* Pause/Resume Button */
-    #kg-ab-panel .btn-pause {
-      background: #e74c3c;
-      color: #fff;
-      display: none;
-      margin-top: 10px;
-    }
-    #kg-ab-panel .btn-pause:hover {
-      background: #c0392b;
-    }
-
-    /* Math Display (Counters) */
-    #kg-ab-math {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 8px;
-      background: #333333;
-      font-size: 14px;
-      color: #d0d0d0;
-      line-height: 1.6;
-    }
-    #kg-ab-math strong {
-      color: #f8d26f; /* Highlight the labels */
-      font-weight: 700;
-    }
-    #kg-ab-math .value {
-      text-align: right;
-      font-weight: 600;
-      color: #fff;
-    }
-    #kg-ab-math .compact-header {
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    #kg-ab-math .reward-grid {
-        display: flex;
-        justify-content: space-around;
-        gap: 10px;
-        margin-top: 8px;
-        font-size: 13px;
-        text-align: center;
-    }
-    #kg-ab-math .reward-item {
-        flex-grow: 1;
-        padding: 6px;
-        border-radius: 6px;
-        background: #2a2a2a;
-    }
-
-    /* ETA/Status Display */
-    #kg-ab-eta-container {
-      margin-top: 10px;
-      font-size: 15px;
-      color: #f8d26f;
-      text-align: center;
-      padding: 8px;
-      border-radius: 8px;
-      background: rgba(248, 210, 111, 0.1);
-    }
-    #kg-ab-eta-container strong {
-      font-weight: 800;
-      color: #ffd36a;
-      font-size: 16px;
-    }
-
-    /* Logs */
-    #kg-ab-logs {
-      max-height: 150px;
-      overflow-y: auto;
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(0,0,0,0.3);
-      font-size: 12px;
-      color: #a9c1d6;
-      display: none;
-      border: 1px solid rgba(255,255,255,0.05);
-      white-space: nowrap;
-      overflow-x: hidden;
-    }
-    #kg-ab-logs div {
-      padding: 2px 0;
-      border-bottom: 1px dashed rgba(255,255,255,0.05);
-    }
-    #kg-ab-logs div:last-child {
-      border-bottom: none;
-    }
-
-    /* Footer */
-    #kg-ab-footer {
-      text-align: center;
-      font-size: 10px;
-      color: #777777;
-      margin-top: 15px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.05);
-    }
-
-    /* Fixing the loop purchase button/display */
-    #kg-ab-panel .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* Better formatting for the loop button's state */
-    .purchase-running #kg-ab-start {
-      display: none !important;
-    }
-    .purchase-running #kg-ab-pause {
-      display: block !important;
-    }
-    .purchase-paused #kg-ab-pause {
-      background: #2ecc71 !important;
-      color: #fff !important;
-    }
-    .purchase-paused #kg-ab-pause:hover {
-      background: #27ae60 !important;
-    }
-  `);
-
-  function waitForParent(selector, callback) {
-    const el = document.querySelector(selector);
-    if (el) return callback(el);
-    const obs = new MutationObserver(() => {
-      const e = document.querySelector(selector);
-      if (e) {
-        obs.disconnect();
-        callback(e);
-      }
-    });
-    obs.observe(document.body, { childList: true, subtree: true });
-  }
-
-  waitForParent('div.hR5CJ', (parent) => {
-    const btn = document.createElement('button');
-    btn.id = 'kg-ab-btn';
-    btn.type = 'button';
-    btn.textContent = 'LOOP PURCHASE';
-    parent.insertBefore(btn, parent.firstChild);
-
-    const overlay = document.createElement('div');
-    overlay.id = 'kg-ab-overlay';
-    document.body.appendChild(overlay);
-
-    const panel = document.createElement('div');
-    panel.id = 'kg-ab-panel';
-    panel.innerHTML = `
-      <div class="header">💰 Mass Purchase Tool <button class="close">✕</button></div>
-      <label for="kg-ab-loops">Loops (times to buy)</label>
-      <input id="kg-ab-loops" type="number" min="1" value="3" />
-
-      <div id="kg-ab-math"></div>
-
-      <div id="kg-ab-eta-container">Estimated Time Remaining: <strong id="kg-ab-eta">00:00:00</strong></div>
-
-      <div class="controls">
-        <div class="btn" id="kg-ab-start">Start Loop Purchase</div>
-        <div class="btn btn-pause" id="kg-ab-pause">Pause</div>
-      </div>
-
-      <div id="kg-ab-logs"></div>
-      <div id="kg-ab-footer">Usage might result in a punishment</div>
-    `;
-    document.body.appendChild(panel);
-
-    const $loops = panel.querySelector('#kg-ab-loops');
-    const $logs = panel.querySelector('#kg-ab-logs');
-    const $start = panel.querySelector('#kg-ab-start');
-    const $pause = panel.querySelector('#kg-ab-pause');
-    const $close = panel.querySelector('.close');
-    const $math = panel.querySelector('#kg-ab-math');
-    const $eta = panel.querySelector('#kg-ab-eta');
-
-    let running=false, paused=false;
-    let etaInterval = null;
-    let etaSeconds = 0;
-
-    function log(msg) {
-      const d = new Date().toLocaleTimeString();
-      const el = document.createElement('div'); el.textContent = `[${d}] ${msg}`;
-      $logs.prepend(el); $logs.style.display='block';
-    }
-
-    function formatTime(sec) {
-      sec = Math.max(0, Math.round(sec || 0));
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = sec % 60;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function stopCountdown() {
-      if (etaInterval) {
-        clearInterval(etaInterval);
-        etaInterval = null;
-      }
-    }
-
-    function startCountdown() {
-      if (etaInterval) clearInterval(etaInterval);
-
-      etaInterval = setInterval(() => {
-        if (!running || paused || etaSeconds <= 0) {
-          if (!running || etaSeconds <= 0) {
-              clearInterval(etaInterval);
-              etaInterval = null;
-              if (etaSeconds <= 0) $eta.textContent = '00:00:00';
-          }
-          return;
-        }
-
-        etaSeconds--;
-        $eta.textContent = formatTime(etaSeconds);
-
-      }, 1000);
-    }
-    function calculateTotalETASec(totalLoops, loopsCompleted) {
-        const remainingPurchases = totalLoops - loopsCompleted;
-        const intervalsNeeded = Math.max(0, remainingPurchases - 1);
-        return intervalsNeeded * INTERVAL_SEC;
-    }
-
-    function updateMath(currentLoop = 0) {
-      const loops = Math.max(1, parseInt($loops.value) || 1);
-
-      const price = PRICE[ctx.objectType];
-      const nonElite = CREATOR_NON_ELITE[ctx.objectType];
-      const elite = CREATOR_ELITE[ctx.objectType];
-      const totalCost = price * loops;
-      const totalNonElite = nonElite * loops;
-      const totalElite = elite * loops;
-
-      const currentLoopDisplay = currentLoop > 0
-        ? `<br/>Current Loop: <strong>${currentLoop}/${loops}</strong>`
-        : '';
-
-      $math.innerHTML = `
-        <div class="compact-header">
-          <strong>Object will be bought</strong> <span class="value">${loops} times</span><br/>
-          <strong>Cost per object is</strong> <span class="value">${price} gold</span><br/>
-          <strong>Total cost amounts to</strong> <span class="value">${totalCost} gold</span>
-          ${currentLoopDisplay}
-        </div>
-
-        <strong>Creator receives:</strong>
-
-        <div class="reward-grid">
-          <div class="reward-item">
-            <strong>If Elite:</strong><br/>
-            <span class="value">${totalElite} gold</span>
-          </div>
-          <div class="reward-item">
-            <strong>If Non Elite:</strong><br/>
-            <span class="value">${totalNonElite} gold</span>
-          </div>
-        </div>
-      `;
-
-      if (!running) {
-        const totalInitialETASec = calculateTotalETASec(loops, 0);
-        etaSeconds = totalInitialETASec;
-        $eta.textContent = formatTime(etaSeconds);
-        stopCountdown();
-      }
-    }
-
-    $loops.addEventListener('input', () => updateMath(0));
-    updateMath();
-
-    btn.addEventListener('click', ()=>{ overlay.style.display='block'; panel.style.display='block'; });
-    $close.addEventListener('click', ()=>{
-        overlay.style.display='none';
-        panel.style.display='none';
-        running=false;
-        stopCountdown();
-        $pause.style.display='none';
-        panel.classList.remove('purchase-running', 'purchase-paused');
-        updateMath(0);
-    });
-    overlay.addEventListener('click', ()=>{
-        overlay.style.display='none';
-        panel.style.display='none';
-        running=false;
-        stopCountdown();
-        $pause.style.display='none';
-        panel.classList.remove('purchase-running', 'purchase-paused');
-        updateMath(0);
-    });
-
-    function purchaseOnce() {
-      const fetchURL = ctx.objectType==='avatar'
-        ? `https://www.kogama.com/model/market/a-${ctx.objectId}/purchase/`
-        : `https://www.kogama.com/model/market/i-${ctx.objectId}/purchase/`;
-      return fetch(fetchURL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) })
-        .then(r=>r.ok).catch(()=>false);
-    }
-
-    async function runLoop() {
-      if(running) return;
-      running=true; paused=false;
-      panel.classList.add('purchase-running');
-      panel.classList.remove('purchase-paused');
-      $logs.style.display='block';
-
-      const loops = Math.max(1, parseInt($loops.value)||1);
-      log(`Starting ${loops} purchases...`);
-      etaSeconds = calculateTotalETASec(loops, 0);
-      startCountdown();
-
-      for (let i=0;i<loops;i++){
-        while(paused) {
-            stopCountdown();
-            await new Promise(r=>setTimeout(r,500));
-        }
-
-        if (!etaInterval) startCountdown();
-        updateMath(i + 1);
-
-        const ok = await purchaseOnce();
-        log(ok?`✅ Success ${i+1}/${loops}`:`❌ Failed ${i+1}/${loops}`);
-
-        if (i < loops - 1) {
-            const newRemainingETASec = calculateTotalETASec(loops, i + 1);
-            etaSeconds = newRemainingETASec + INTERVAL_SEC;
-
-            await new Promise(res=>setTimeout(res, INTERVAL_MS));
-        } else {
-             etaSeconds = 0;
-        }
-      }
-      log('🎉 All purchases done.');
-      running=false;
-      stopCountdown();
-      panel.classList.remove('purchase-running', 'purchase-paused');
-      updateMath(loops);
-    }
-
-    $start.addEventListener('click', runLoop);
-    $pause.addEventListener('click', ()=>{
-      paused=!paused;
-      $pause.textContent = paused ? 'Resume' : 'Pause';
-      log(paused?'⏸️ Paused':'▶️ Resumed');
-      if (paused) {
-        panel.classList.add('purchase-paused');
-      } else {
-        panel.classList.remove('purchase-paused');
-        startCountdown();
-      }
-    });
-  });
 })();
