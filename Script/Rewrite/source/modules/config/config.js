@@ -1512,45 +1512,70 @@ disableStreakKeeper() {
       }
     };
 
-    function createSettingsButton() {
-      const btn = document.createElement('button');
-      btn.id = 'utilify_settings_btn';
-      btn.setAttribute('aria-label', 'Open Utilify Settings');
-      btn.innerHTML = '✦';
-      btn.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, rgba(255, 192, 203, 0.3), rgba(200, 190, 220, 0.3));
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 192, 203, 0.4);
-        color: #ffc0cb;
-        font-size: 24px;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(255, 192, 203, 0.3);
-        z-index: 119999;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-      
-      btn.addEventListener('mouseenter', () => {
-        btn.style.transform = 'scale(1.1) rotate(90deg)';
-        btn.style.boxShadow = '0 6px 30px rgba(255, 192, 203, 0.5)';
-      });
-      
-      btn.addEventListener('mouseleave', () => {
-        btn.style.transform = 'scale(1) rotate(0deg)';
-        btn.style.boxShadow = '0 4px 20px rgba(255, 192, 203, 0.3)';
-      });
-      
-      btn.addEventListener('click', () => UI.show());
-      document.body.appendChild(btn);
-    }
+function createSettingsButton() {
+  if (document.getElementById('utilify_settings_btn')) return;
+
+  const tryInject = () => {
+    const targetList = document.querySelector('ol._3hI0M');
+    if (!targetList) return false;
+
+    const li = document.createElement('li');
+    li.className = '_3WhKY';
+
+    const btn = document.createElement('button');
+    btn.id = 'utilify_settings_btn';
+    btn.setAttribute('aria-label', 'Open Utilify Settings');
+    btn.innerHTML = '✦';
+
+    btn.style.cssText = `
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 192, 203, 0.3), rgba(200, 190, 220, 0.3));
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 192, 203, 0.4);
+    color: #ffc0cb;
+    font-size: 11px;
+    line-height: 1;
+    margin-right: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255, 192, 203, 0.3);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 50% 50%;
+    `;
+
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'scale(1.1) rotate(90deg)';
+      btn.style.boxShadow = '0 6px 30px rgba(255, 192, 203, 0.5)';
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'scale(1) rotate(0deg)';
+      btn.style.boxShadow = '0 4px 20px rgba(255, 192, 203, 0.3)';
+    });
+
+    btn.addEventListener('click', () => UI.show());
+
+    li.appendChild(btn);
+    targetList.insertBefore(li, targetList.firstElementChild);
+
+    return true;
+  };
+
+  if (tryInject()) return;
+
+  const observer = new MutationObserver(() => {
+    if (tryInject()) observer.disconnect();
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
   
     function init() {
       Styles.initBase();
